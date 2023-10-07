@@ -1,6 +1,6 @@
 
 
-- [3D Object Detection on nuScenes Camera Only](https://paperswithcode.com/sota/3d-object-detection-on-nuscenes-camera-only)
+[3D OD on nuScenes Camera Only Leaderboard](https://paperswithcode.com/sota/3d-object-detection-on-nuscenes-camera-only)
 
 
 ## Research papers
@@ -10,7 +10,8 @@
 - [BEVFormer2](https://browse.arxiv.org/pdf/2211.10439.pdf)
 - [BEVerse](https://browse.arxiv.org/pdf/2205.09743.pdf)
 - [SpareBEV](https://browse.arxiv.org/pdf/2308.09244.pdf)
-
+- [Panoptic BEV](https://browse.arxiv.org/pdf/2108.03227.pdf)
+- [BEVSegformer](https://browse.arxiv.org/pdf/2203.04050.pdf)
 
 ## Datasets
 - [Surrounding vehicles awareness dataset](https://imagelab.ing.unimore.it/imagelab/page.asp?IdPage=19)
@@ -38,9 +39,12 @@
 ## Videos
 - [BEVFusion demo](https://www.youtube.com/watch?v=uCAka90si9E)
 - [UNetXST explanation](https://www.youtube.com/watch?v=w5mbg479dpE)
-
+- [BEVSegformer](https://www.youtube.com/watch?v=MjkHs-z_w6o)
+- [BEVSegformer](https://www.youtube.com/watch?v=MjkHs-z_w6o)
+- [Panoptic BEV](https://www.youtube.com/watch?v=HCJ1Hi_y9x8)
 
 ## Repos
+- [BEV perception papers collection](https://github.com/chaytonmin/Awesome-BEV-Perception-Multi-Cameras)
 - [Cam2BEV](https://github.com/ika-rwth-aachen/Cam2BEV)
 - [UNetXst Kaggle notebook](https://www.kaggle.com/code/sakshaymahna/unetxst/notebook)
 - [Surround vehicles awareness GTA Simulated model](https://github.com/ndrplz/surround_vehicles_awareness/tree/master)
@@ -50,3 +54,5 @@
 - [BEVDet](https://github.com/HuangJunjie2017/BEVDet)
 - [BEVFusion](https://github.com/mit-han-lab/bevfusion)
 - [mmdetection3D](https://github.com/open-mmlab/mmdetection3d)
+- [Panoptic BEV](https://github.com/robot-learning-freiburg/PanopticBEV)
+- [360 BEV indoor Segmentation](https://github.com/jamycheung/360BEV)
