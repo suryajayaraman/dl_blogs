@@ -29,6 +29,7 @@
 - [Understanding Homography (a.k.a Perspective Transformation)](https://towardsdatascience.com/understanding-homography-a-k-a-perspective-transformation-cacaed5ca17)
 - [OpenCV homography documentation](https://docs.opencv.org/4.x/d9/dab/tutorial_homography.html)
 - [Homography vs Affine transformation](https://www.baeldung.com/cs/homography-vs-affine-transformation)
+- [Inverse Perspective Mapping explained](https://towardsdatascience.com/a-hands-on-application-of-homography-ipm-18d9e47c152f)
 
 ### Deep Learning
 - [Spatial Transformers part1](https://kevinzakka.github.io/2017/01/10/stn-part1/)
@@ -64,3 +65,4 @@
 - [mmdetection3D](https://github.com/open-mmlab/mmdetection3d)
 - [Panoptic BEV](https://github.com/robot-learning-freiburg/PanopticBEV)
 - [360 BEV indoor Segmentation](https://github.com/jamycheung/360BEV)
+- [IPM example](https://github.com/darylclimb/cvml_project/tree/master/projections/ipm)
