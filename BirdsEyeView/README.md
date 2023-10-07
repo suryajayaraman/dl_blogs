@@ -6,6 +6,7 @@
 ## Research papers
 - [Spatial Transformers](https://browse.arxiv.org/pdf/1506.02025.pdf)
 - [Cam2BEV](https://browse.arxiv.org/pdf/2005.04078.pdf)
+- [Deformable DETR](https://browse.arxiv.org/pdf/2010.04159.pdf)
 - [BEVFormer](https://arxiv.org/abs/2203.17270)
 - [BEVFormer2](https://browse.arxiv.org/pdf/2211.10439.pdf)
 - [BEVerse](https://browse.arxiv.org/pdf/2205.09743.pdf)
@@ -34,7 +35,13 @@
 - [Spatial Transformers part2](https://kevinzakka.github.io/2017/01/18/stn-part2/)
 - [Learning to Map Vehicles into Bird’s Eye View](https://medium.com/syncedreview/learning-to-map-vehicles-into-birds-eye-view-dbf4d3de513)
 - [Monocular Bird’s-Eye-View Semantic Segmentation for Autonomous Driving](https://towardsdatascience.com/monocular-birds-eye-view-semantic-segmentation-for-autonomous-driving-ee2f771afb59)
-
+- [Deformable DETR review](https://sh-tsang.medium.com/review-deformable-transformers-for-end-to-end-object-detection-e29786ef2b4c)
+- [DETR review](https://sh-tsang.medium.com/review-detr-end-to-end-object-detection-with-transformers-c64977be4b8e)
+- [DETR medium post](https://medium.com/visionwizard/detr-b677c7016a47)
+- [DETR Meta post](https://ai.meta.com/blog/end-to-end-object-detection-with-transformers/)
+- [DETR pyimagesearch part1](https://pyimagesearch.com/2023/05/22/detr-breakdown-part-1-introduction-to-detection-transformers/)
+- [DETR  pyimagesearch part2](https://pyimagesearch.com/2023/06/12/detr-breakdown-part-2-methodologies-and-algorithms/)
+- [DETR  pyimagesearch part3](https://pyimagesearch.com/2023/06/26/detr-breakdown-part-3-architecture-and-details/)
 
 ## Videos
 - [BEVFusion demo](https://www.youtube.com/watch?v=uCAka90si9E)
@@ -48,6 +55,7 @@
 - [Cam2BEV](https://github.com/ika-rwth-aachen/Cam2BEV)
 - [UNetXst Kaggle notebook](https://www.kaggle.com/code/sakshaymahna/unetxst/notebook)
 - [Surround vehicles awareness GTA Simulated model](https://github.com/ndrplz/surround_vehicles_awareness/tree/master)
+- [Deformable DETR official implementation](https://github.com/fundamentalvision/Deformable-DETR)
 - [BEVFormer official implementation](https://github.com/fundamentalvision/BEVFormer)
 - [SparseBEV official implementation](https://github.com/mcg-nju/sparsebev)
 - [BEVFusion](https://github.com/mit-han-lab/bevfusion)
