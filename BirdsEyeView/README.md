@@ -11,6 +11,7 @@
 - [BEVFormer2](https://browse.arxiv.org/pdf/2211.10439.pdf)
 - [BEVerse](https://browse.arxiv.org/pdf/2205.09743.pdf)
 - [SpareBEV](https://browse.arxiv.org/pdf/2308.09244.pdf)
+- [Simple BEV](https://browse.arxiv.org/pdf/2206.07959.pdf)
 - [Panoptic BEV](https://browse.arxiv.org/pdf/2108.03227.pdf)
 - [BEVSegformer](https://browse.arxiv.org/pdf/2203.04050.pdf)
 
@@ -63,6 +64,7 @@
 - [BEVFusion](https://github.com/mit-han-lab/bevfusion)
 - [BEVDet](https://github.com/HuangJunjie2017/BEVDet)
 - [BEVFusion](https://github.com/mit-han-lab/bevfusion)
+- [Simple BEV](https://github.com/aharley/simple_bev)
 - [mmdetection3D](https://github.com/open-mmlab/mmdetection3d)
 - [Panoptic BEV](https://github.com/robot-learning-freiburg/PanopticBEV)
 - [360 BEV indoor Segmentation](https://github.com/jamycheung/360BEV)
