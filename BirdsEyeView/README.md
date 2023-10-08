@@ -54,6 +54,7 @@
 ## Repos
 - [BEV perception papers collection](https://github.com/chaytonmin/Awesome-BEV-Perception-Multi-Cameras)
 - [Cam2BEV](https://github.com/ika-rwth-aachen/Cam2BEV)
+- [Cam2BEV pytorch implementation](https://github.com/AlaaBenZekri/Cam2EBV/tree/main)
 - [UNetXst Kaggle notebook](https://www.kaggle.com/code/sakshaymahna/unetxst/notebook)
 - [Surround vehicles awareness GTA Simulated model](https://github.com/ndrplz/surround_vehicles_awareness/tree/master)
 - [Deformable DETR official implementation](https://github.com/fundamentalvision/Deformable-DETR)
