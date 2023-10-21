@@ -14,6 +14,7 @@
 - [Simple BEV](https://browse.arxiv.org/pdf/2206.07959.pdf)
 - [Panoptic BEV](https://browse.arxiv.org/pdf/2108.03227.pdf)
 - [BEVSegformer](https://browse.arxiv.org/pdf/2203.04050.pdf)
+- [BEV Survey](https://arxiv.org/pdf/2209.05324.pdf)
 
 ## Datasets
 - [Surrounding vehicles awareness dataset](https://imagelab.ing.unimore.it/imagelab/page.asp?IdPage=19)
@@ -69,3 +70,4 @@
 - [Panoptic BEV](https://github.com/robot-learning-freiburg/PanopticBEV)
 - [360 BEV indoor Segmentation](https://github.com/jamycheung/360BEV)
 - [IPM example](https://github.com/darylclimb/cvml_project/tree/master/projections/ipm)
+- [BEV Perception](https://github.com/OpenDriveLab/Birds-eye-view-Perception)
