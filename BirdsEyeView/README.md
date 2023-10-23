@@ -87,3 +87,7 @@
 - [IPM example](https://github.com/darylclimb/cvml_project/tree/master/projections/ipm)
 - [BEV Perception](https://github.com/OpenDriveLab/Birds-eye-view-Perception)
 - [Torch geometry Homography transform](https://kornia.readthedocs.io/en/v0.1.2/warping.html)
+- [KITTI raw data utility packages references](https://www.cvlibs.net/datasets/kitti/raw_data.php)
+- [IPM video conversion sample](https://github.com/osvaldlaszlo/inverse-perspective-mapping/tree/master)
+- [KITTI motion compensation](https://github.com/fracgawd/kitti_motion_compensation)
+- [Qt KITTI Visualizer](https://github.com/MarkMuth/QtKittiVisualizer/blob/master/documentation/screenshots/qt-kitti-visualizer.png)
