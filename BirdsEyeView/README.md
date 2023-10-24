@@ -4,16 +4,32 @@
 
 
 ## Research papers
+- [BEV Survey](https://arxiv.org/pdf/2209.05324.pdf)
 - [Spatial Transformers](https://browse.arxiv.org/pdf/1506.02025.pdf)
-- [Cam2BEV](https://browse.arxiv.org/pdf/2005.04078.pdf)
 - [Deformable DETR](https://browse.arxiv.org/pdf/2010.04159.pdf)
+
+
+### BEV Camera
+- [BEVerse](https://browse.arxiv.org/pdf/2205.09743.pdf)
+- [BEVSegformer](https://browse.arxiv.org/pdf/2203.04050.pdf)
+- [Cam2BEV](https://browse.arxiv.org/pdf/2005.04078.pdf)
+- [DETR3D](https://arxiv.org/pdf/2110.06922.pdf)
+- [Lift Splat Shoot](https://arxiv.org/pdf/2008.05711.pdf)
+- [PseudoLidar](https://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_Pseudo-LiDAR_From_Visual_Depth_Estimation_Bridging_the_Gap_in_3D_CVPR_2019_paper.pdf)
+- [SparseBEV](https://browse.arxiv.org/pdf/2308.09244.pdf)
+- [Simple BEV](https://browse.arxiv.org/pdf/2206.07959.pdf)
+
+### BEV Lidar
+### BEV Fusion
 - [BEVFormer](https://arxiv.org/abs/2203.17270)
 - [BEVFormer2](https://browse.arxiv.org/pdf/2211.10439.pdf)
-- [BEVerse](https://browse.arxiv.org/pdf/2205.09743.pdf)
-- [SpareBEV](https://browse.arxiv.org/pdf/2308.09244.pdf)
-- [Simple BEV](https://browse.arxiv.org/pdf/2206.07959.pdf)
+- [BEVFusion](https://arxiv.org/pdf/2205.13542.pdf)
+- [Fast BEV](https://arxiv.org/pdf/2301.12511.pdf)
+- [HDMapNet](https://arxiv.org/pdf/2107.06307.pdf)
+- [MV3D](https://arxiv.org/pdf/1611.07759.pdf)
+- [MVFuseNet](https://arxiv.org/pdf/2104.10772.pdf)
 - [Panoptic BEV](https://browse.arxiv.org/pdf/2108.03227.pdf)
-- [BEVSegformer](https://browse.arxiv.org/pdf/2203.04050.pdf)
+
 
 ## Datasets
 - [Surrounding vehicles awareness dataset](https://imagelab.ing.unimore.it/imagelab/page.asp?IdPage=19)
@@ -69,3 +85,9 @@
 - [Panoptic BEV](https://github.com/robot-learning-freiburg/PanopticBEV)
 - [360 BEV indoor Segmentation](https://github.com/jamycheung/360BEV)
 - [IPM example](https://github.com/darylclimb/cvml_project/tree/master/projections/ipm)
+- [BEV Perception](https://github.com/OpenDriveLab/Birds-eye-view-Perception)
+- [Torch geometry Homography transform](https://kornia.readthedocs.io/en/v0.1.2/warping.html)
+- [KITTI raw data utility packages references](https://www.cvlibs.net/datasets/kitti/raw_data.php)
+- [IPM video conversion sample](https://github.com/osvaldlaszlo/inverse-perspective-mapping/tree/master)
+- [KITTI motion compensation](https://github.com/fracgawd/kitti_motion_compensation)
+- [Qt KITTI Visualizer](https://github.com/MarkMuth/QtKittiVisualizer/blob/master/documentation/screenshots/qt-kitti-visualizer.png)
