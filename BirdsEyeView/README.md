@@ -48,6 +48,13 @@
 - [Homography vs Affine transformation](https://www.baeldung.com/cs/homography-vs-affine-transformation)
 - [Inverse Perspective Mapping explained](https://towardsdatascience.com/a-hands-on-application-of-homography-ipm-18d9e47c152f)
 
+### IPM / Homography references
+- [pyimagesearch 4point transform](https://pyimagesearch.com/2014/08/25/4-point-opencv-getperspective-transform-example/)
+- [BEV transform using OpenCV](https://gist.github.com/anujonthemove/7b35b7c1e05f01dd11d74d94784c1e58)
+- [SO BEV transform opencv](https://stackoverflow.com/questions/48576087/birds-eye-view-perspective-transformation-from-camera-calibration-opencv-python) 
+- [Homography transform](https://docs.opencv.org/3.4.0/d9/dab/tutorial_homography.html#tutorial_homography_Demo3)
+- [cvml projections ipm](https://github.com/darylclimb/cvml_project/blob/master/projections/ipm/utils.py)
+
 ### Deep Learning
 - [Spatial Transformers part1](https://kevinzakka.github.io/2017/01/10/stn-part1/)
 - [Spatial Transformers part2](https://kevinzakka.github.io/2017/01/18/stn-part2/)
