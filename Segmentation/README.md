@@ -12,6 +12,8 @@
 - [The Illustrated SSL blog](https://amitness.com/2020/02/illustrated-self-supervised-learning/)
 - [SSL literature survey](https://arxiv.org/pdf/2301.05712.pdf)
 - [SSL for image based Generative and Discriminative Training](https://arxiv.org/pdf/2305.13689.pdf)
+- [SSL Pretraining for OD](https://arxiv.org/pdf/2207.04186.pdf)
+- [SkyEye: Self-Supervised Bird’s-Eye-View Semantic Mapping](https://openaccess.thecvf.com/content/CVPR2023/papers/Gosala_SkyEye_Self-Supervised_Birds-Eye-View_Semantic_Mapping_Using_Monocular_Frontal_View_Images_CVPR_2023_paper.pdf)
 
   
 ## Semi-supervised learning
