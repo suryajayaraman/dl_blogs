@@ -42,8 +42,8 @@ Models
 - [Towards Good Practices in Self-supervised
 Representation Learning](https://assets.amazon.science/f8/bb/520157fc4679984721dea85cc690/towards-good-practices-in-self-supervised-representation-learning.pdf) 
 - [https://www.youtube.com/watch?v=gANrNcR2wMM](SSL Lecture)
-- []() 
-
+- [Dino V2](https://arxiv.org/pdf/2304.07193.pdf) 
+- [Dino V2 github](https://github.com/facebookresearch/dinov2)
 
 ## Semi-supervised learning
 - [Awesome Semi-Supervised Learning](https://github.com/yassouali/awesome-semi-supervised-learning)
