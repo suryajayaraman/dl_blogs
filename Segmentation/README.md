@@ -15,35 +15,34 @@
 - [SSL Pretraining for OD](https://arxiv.org/pdf/2207.04186.pdf)
 - [SkyEye: Self-Supervised Bird’s-Eye-View Semantic Mapping](https://openaccess.thecvf.com/content/CVPR2023/papers/Gosala_SkyEye_Self-Supervised_Birds-Eye-View_Semantic_Mapping_Using_Monocular_Frontal_View_Images_CVPR_2023_paper.pdf)
 
-## Videos
+## Is it used in practice
+- [Efficient visual pretraining with contrastive detection]()
+- [Data efficient image recognition with contrastive predictive coding]()
 
-## Papers
+## Literature survey
+- [SSL - self prediction & contrastive learnign NeurIPS tutorial 2021]()
+- [eccv 2022 ssl tutorial github]()
+
+## Models
 - [Unsupervised representation learning by predicting image rotations]()
 - [Unsupervised semantic segmenation using invariance and equivariance in clustering]()
 - [Unsupervised semantic segmenation by distilling feature correspondences]()
 - [Drive & Segment]()
 - [Localizing objects with Self supervised transformers]()
-
-Is it used in practice
-- [Efficient visual pretraining with contrastive detection]()
-- [Data efficient image recognition with contrastive predictive coding]()
-
-Literature survey
-- [SSL - self prediction & contrastive learnign NeurIPS tutorial 2021]()
-- [eccv 2022 ssl tutorial github]()
-
-Models
+- [Self Surpervised representation via flow equivariance]()
 - SimCLR, MoCo, SwAV, BYOL, Dino, BeIT
 
-- [Self Surpervised representation via flow equivariance]()
+## SSL Good practics / Guides
 - [SSL Practical guide](https://ai.meta.com/blog/self-supervised-learning-practical-guide/)
 - [SSL cookbook](https://arxiv.org/pdf/2304.12210.pdf) 
 - [SSL in vision](https://icml.cc/virtual/2023/tutorial/21552)
-- [Towards Good Practices in Self-supervised
-Representation Learning](https://assets.amazon.science/f8/bb/520157fc4679984721dea85cc690/towards-good-practices-in-self-supervised-representation-learning.pdf) 
+- [Towards Good Practices in Self-supervised Representation Learning](https://assets.amazon.science/f8/bb/520157fc4679984721dea85cc690/towards-good-practices-in-self-supervised-representation-learning.pdf) 
 - [https://www.youtube.com/watch?v=gANrNcR2wMM](SSL Lecture)
 - [Dino V2](https://arxiv.org/pdf/2304.07193.pdf) 
 - [Dino V2 github](https://github.com/facebookresearch/dinov2)
+- [Self-supervised learning for point cloud data: A survey](https://www.sciencedirect.com/science/article/pii/S0957417423018560)
+- [Self-supervised learning for point cloud data: A survey](https://openaccess.thecvf.com/content/CVPR2023/papers/Wu_Spatiotemporal_Self-Supervised_Learning_for_Point_Clouds_in_the_Wild_CVPR_2023_paper.pdf)
+
 
 ## Semi-supervised learning
 - [Awesome Semi-Supervised Learning](https://github.com/yassouali/awesome-semi-supervised-learning)
