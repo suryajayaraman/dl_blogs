@@ -41,7 +41,7 @@
 - [Dino V2](https://arxiv.org/pdf/2304.07193.pdf) 
 - [Dino V2 github](https://github.com/facebookresearch/dinov2)
 - [Self-supervised learning for point cloud data: A survey](https://www.sciencedirect.com/science/article/pii/S0957417423018560)
-- [Self-supervised learning for point cloud data: A survey](https://openaccess.thecvf.com/content/CVPR2023/papers/Wu_Spatiotemporal_Self-Supervised_Learning_for_Point_Clouds_in_the_Wild_CVPR_2023_paper.pdf)
+- [Spatiotemporal_Self-Supervised_Learning_for_Point_Clouds](https://openaccess.thecvf.com/content/CVPR2023/papers/Wu_Spatiotemporal_Self-Supervised_Learning_for_Point_Clouds_in_the_Wild_CVPR_2023_paper.pdf)
 
 
 ## Semi-supervised learning
