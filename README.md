@@ -3,3 +3,4 @@ Blogs about Deep Learning, focussed on Self-driving vehicles
 
 
 - [BirdsEyeView](BirdsEyeView)
+- [Self-Supervised-Learning](Self-Supervised-Learning)
