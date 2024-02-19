@@ -1,3 +1,4 @@
+# TODO: UPDATE REFERENCES, CLEANUP DOC
 
 ## OpenMMLab
 - [mmdetection mmseg installation kaggle](https://github.com/open-mmlab/mmdetection/issues/10401)
