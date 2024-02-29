@@ -7,7 +7,7 @@ go-to approach, as seen in the [nuScenes Camera only 3D Object detection leaderb
 popular. 
 - **NOTE**: The work is more of literature survey of the different approaches, and is aimed at providing consolidated information for anyone looking to foray into this domain. Kindly refer to License usage on the particulare repo / paper before using for any other purpose
 
-## Agenda
+## Contents
 - [BEV Overview](#bev-overview)
 - [Advantages](#advantages)
 - [BEV Approaches](#bev-approaches)
