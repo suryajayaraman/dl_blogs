@@ -1,12 +1,3 @@
-# Birds Eye View
-- BEV (Birds Eye View) is nothing but a top-down view of the physical world . It’s mostly expressed in
-euclidean space (in metres), and can be a 2D / 3D coordinate frame.
-- Among Camera-only solutions, Birdseye view (BEV) based approaches have almost been the
-go-to approach, as seen in the [nuScenes Camera only 3D Object detection leaderboard](https://paperswithcode.com/sota/3d-object-detection-on-nuscenes-camera-only)
-- Post 2021, when Tesla switched to Hydranets, Camera-only solutions are becoming more and more
-popular. 
-- **NOTE**: The work is more of literature survey of the different approaches, and is aimed at providing consolidated information for anyone looking to foray into this domain. Kindly refer to License usage on the particulare repo / paper before using for any other purpose
-
 ## Contents
 - [BEV Overview](#bev-overview)
 - [Advantages](#advantages)
@@ -17,6 +8,13 @@ popular.
 
 
 ## BEV Overview
+- BEV (Birds Eye View) is nothing but a top-down view of the physical world . It’s mostly expressed in
+euclidean space (in metres), and can be a 2D / 3D coordinate frame.
+- Among Camera-only solutions, Birdseye view (BEV) based approaches have almost been the
+go-to approach, as seen in the [nuScenes Camera only 3D Object detection leaderboard](https://paperswithcode.com/sota/3d-object-detection-on-nuscenes-camera-only)
+- Post 2021, when Tesla switched to Hydranets, Camera-only solutions are becoming more and more
+popular. 
+- **NOTE**: The work is more of literature survey of the different approaches, and is aimed at providing consolidated information for anyone looking to foray into this domain. Kindly refer to License usage on the particulare repo / paper before using for any other purpose
 - [BirdsEyeView](BirdsEyeView.pdf) is summary of literature review on Birds Eye View, classification taxonomy, traditional approaches, Deep Learning approaches, use cases for Autonomous Driving tasks with examples
 
 ## Advantages
