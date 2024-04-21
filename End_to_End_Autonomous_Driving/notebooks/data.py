@@ -146,29 +146,21 @@ class CARLA_Data(Dataset):
         # ego car is always the first one in label file
         ego_id = labels[0][0]['id']
 
-        # only use label of frame 1
+        # Bounding boxes of objects within BEV FOV(32m x 32m)
+        # considering only current frame objects
         bboxes = parse_labels(labels[0])
-        waypoints = get_waypoints(labels[self.seq_len-1:], self.pred_len+1)
-        waypoints = transform_waypoints(waypoints)
-
-        # save waypoints in meters
-        filtered_waypoints = []
-        for id in list(bboxes.keys()) + [ego_id]:
-            waypoint = []
-            for matrix, _ in waypoints[id][1:]:
-                waypoint.append(matrix[:2, 3])
-            filtered_waypoints.append(waypoint)
-        waypoints = np.array(filtered_waypoints)
-
-        # padding
         label = np.array(list(bboxes.values()))
         label_pad = np.zeros((20, 7), dtype=np.float32)
-        ego_waypoint = waypoints[-1]
         if label.shape[0] > 0:
             label_pad[:label.shape[0], :] = label
-
         data['label'] = label_pad
-        data['ego_waypoint'] = ego_waypoint
+
+        # use position of ego vehicle in future frames
+        # as groundtruth reference
+        waypoints = get_waypoints(labels[self.seq_len-1:], self.pred_len+1)
+        waypoints = transform_waypoints(waypoints)
+        ego_waypoints = np.array([x[0][:2,3] for x in waypoints[ego_id][1:]])
+        data['ego_waypoint'] = ego_waypoints
         return data
 
 
