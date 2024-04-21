@@ -129,10 +129,9 @@ class CARLA_Data(Dataset):
         data['target_point_image'] = draw_target_point(local_command_point)
 
         # load point cloud (XYZI), flip y-axis
-        # align to previous data, compute Lidar BEV features
+        # compute Lidar BEV features
         lidars_pc = np.load(str(self.lidars[index], encoding='utf-8'), allow_pickle=True)[1] 
         lidars_pc[:, 1] *= -1
-        lidars_pc = align(lidars_pc, measurements, measurements, degree=0)
         data['lidar'] = lidar_to_histogram_features(lidars_pc)
 
 
