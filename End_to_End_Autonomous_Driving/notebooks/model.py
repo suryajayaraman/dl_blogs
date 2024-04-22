@@ -651,37 +651,6 @@ class LidarCenterNet(nn.Module):
 
         return steer, throttle, brake
     
-    def forward_ego(self, rgb, lidar_bev, target_point, target_point_image, ego_vel, bev_points=None, cam_points=None, save_path=None, expert_waypoints=None,
-                    stuck_detector=0, forced_move=False, num_points=None, rgb_back=None, debug=False):
-        
-        lidar_bev = torch.cat((lidar_bev, target_point_image), dim=1)
-        features, image_features_grid, fused_features = self._model(rgb, lidar_bev, ego_vel)
-        pred_wp, _, _, _, _ = self.forward_gru(fused_features, target_point)
-
-        preds = self.head([features[0]])
-        results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
-        bboxes, _ = results[0]
-
-        # filter bbox based on the confidence of the prediction
-        bboxes = bboxes[bboxes[:, -1] > self.config.bb_confidence_threshold]
-        rotated_bboxes = []
-        for bbox in bboxes.detach().cpu().numpy():
-            bbox = self.get_bbox_local_metric(bbox)
-            rotated_bboxes.append(bbox)
-
-        self.i += 1
-        if debug and self.i % 2 == 0 and not (save_path is None):
-            pred_bev = self.pred_bev(features[0])
-            pred_bev = F.interpolate(pred_bev, (self.config.bev_resolution_height, self.config.bev_resolution_width), mode='bilinear', align_corners=True)
-            pred_semantic = self.seg_decoder(image_features_grid)
-            pred_depth = self.depth_decoder(image_features_grid)
-
-            self.visualize_model_io(save_path, self.i, self.config, rgb, lidar_bev, target_point,
-                            pred_wp, pred_bev, pred_semantic, pred_depth, bboxes, self.device,
-                            gt_bboxes=None, expert_waypoints=expert_waypoints, stuck_detector=stuck_detector, forced_move=forced_move)
-
-
-        return pred_wp, rotated_bboxes
 
     def forward(self, rgb, lidar_bev, ego_waypoint, target_point, target_point_image, ego_vel, bev, label, depth, semantic, num_points=None, save_path=None, bev_points=None, cam_points=None):
         loss = {}
@@ -731,43 +700,6 @@ class LidarCenterNet(nn.Module):
 
         return loss
 
-
-    # Converts the coordinate system to x front y right, vehicle center at the origin.
-    # Units are converted from pixels to meters
-    def get_bbox_local_metric(self, bbox):
-        x, y, w, h, yaw, speed, brake, confidence = bbox
-
-        w = w / self.config.bounding_box_divisor / self.config.pixels_per_meter # We multiplied by 2 when collecting the data, and multiplied by 8 when loading the labels.
-        h = h / self.config.bounding_box_divisor / self.config.pixels_per_meter # We multiplied by 2 when collecting the data, and multiplied by 8 when loading the labels.
-
-        T = get_lidar_to_bevimage_transform()
-        T_inv = np.linalg.inv(T)
-
-        center = np.array([x,y,1.0])
-
-        center_old_coordinate_sys = T_inv @ center
-
-        center_old_coordinate_sys = center_old_coordinate_sys + np.array(self.config.lidar_pos)
-
-        #Convert to standard CARLA right hand coordinate system
-        center_old_coordinate_sys[1] =  -center_old_coordinate_sys[1]
-
-        bbox = np.array([[-h, -w, 1],
-                         [-h,  w, 1],
-                         [ h,  w, 1],
-                         [ h, -w, 1],
-                         [ 0,  0, 1],
-                         [ 0, h * speed * 0.5, 1]])
-
-        R = np.array([[np.cos(yaw), -np.sin(yaw), 0],
-                      [np.sin(yaw),  np.cos(yaw), 0],
-                      [0,                      0, 1]])
-
-        for point_index in range(bbox.shape[0]):
-            bbox[point_index] = R @ bbox[point_index]
-            bbox[point_index] = bbox[point_index] + np.array([center_old_coordinate_sys[0], center_old_coordinate_sys[1],0])
-
-        return bbox, brake, confidence
 
     # this is different
     def get_rotated_bbox(self, bbox):

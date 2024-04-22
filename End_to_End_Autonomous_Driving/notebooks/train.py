@@ -16,8 +16,9 @@ import random
 import torch.multiprocessing as mp
 
 log_dir = os.path.join('/home/surya/Downloads/transfuser_logs', 'test')
-root_dir = '/home/surya/Downloads/CARLA_data'
+root_dir = '/home/surya/Downloads/transfuser-2022/data/'
 N_EPOCHS = 1
+
 
 # Records error and tracebacks in case of failure
 @record
@@ -47,12 +48,12 @@ def main():
     g_cuda = torch.Generator(device='cpu')
     g_cuda.manual_seed(torch.initial_seed())
 
-    dataloader_train = DataLoader(train_set, shuffle=True, batch_size=2, worker_init_fn=seed_worker, generator=g_cuda, num_workers=0, pin_memory=True)
-    dataloader_val   = DataLoader(val_set,   shuffle=True, batch_size=2, worker_init_fn=seed_worker, generator=g_cuda, num_workers=0, pin_memory=True)
+    dataloader_train = DataLoader(train_set, shuffle=True, batch_size=2, worker_init_fn=seed_worker, generator=g_cuda, num_workers=0, pin_memory=False)
+    dataloader_val   = DataLoader(val_set,   shuffle=True, batch_size=2, worker_init_fn=seed_worker, generator=g_cuda, num_workers=0, pin_memory=False)
 
     writer = SummaryWriter(log_dir=log_dir)
     trainer = Engine(model=model, optimizer=optimizer, dataloader_train=dataloader_train, dataloader_val=dataloader_val,
-                     config=config, writer=writer, device=device)
+                     config=config, writer=writer, device=device, log_dir=log_dir)
 
     for epoch in range(trainer.cur_epoch, N_EPOCHS):
         current_lr = optimizer.param_groups[0]['lr']
@@ -70,7 +71,8 @@ class Engine(object):
     Engine that runs training.
     """
 
-    def __init__(self, model, optimizer, dataloader_train, dataloader_val, config : GlobalConfig, writer, device):
+    def __init__(self, model, optimizer, dataloader_train, dataloader_val, config : GlobalConfig, \
+                 writer, device, log_dir=log_dir):
         self.cur_epoch = 0
         self.bestval_epoch = 0
         self.train_loss = []
@@ -83,6 +85,7 @@ class Engine(object):
         self.config = config
         self.writer = writer
         self.device = device
+        self.log_dir = log_dir
         self.vis_save_path = self.log_dir + r'/visualizations'
         self.detailed_losses = config.detailed_losses
         detailed_losses_weights = config.detailed_losses_weights
