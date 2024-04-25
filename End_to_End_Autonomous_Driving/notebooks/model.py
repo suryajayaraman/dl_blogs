@@ -651,21 +651,22 @@ class LidarCenterNet(nn.Module):
 
         return steer, throttle, brake
     
-
-    def forward(self, rgb, lidar_bev, ego_waypoint, target_point, target_point_image, ego_vel, bev, label, depth, semantic, num_points=None, save_path=None, bev_points=None, cam_points=None):
+    # def forward(self, rgb, lidar_bev, ego_waypoint, target_point, target_point_image, ego_vel, bev, label, depth, semantic, num_points=None, save_path=None, bev_points=None, cam_points=None):
+    def forward(self, data, save_path=None):
+        
         loss = {}
-        lidar_bev = torch.cat((lidar_bev, target_point_image), dim=1)
-        features, image_features_grid, fused_features = self._model(rgb, lidar_bev, ego_vel)
-        pred_wp, _, _, _, _ = self.forward_gru(fused_features, target_point)
+        data['lidar'] = torch.cat((data['lidar'], data['target_point_image']), dim=1)
+        features, image_features_grid, fused_features = self._model(data['rgb'], data['lidar'], data['speed'])
+        pred_wp, _, _, _, _ = self.forward_gru(fused_features, data['target_point'])
 
         # pred topdown view
         pred_bev = self.pred_bev(features[0])
         pred_bev = F.interpolate(pred_bev, (self.config.bev_resolution_height, self.config.bev_resolution_width), mode='bilinear', align_corners=True)
 
         weight = torch.from_numpy(np.array([1., 1., 3.])).to(dtype=torch.float32, device=pred_bev.device)
-        loss_bev = F.cross_entropy(pred_bev, bev, weight=weight).mean()
+        loss_bev = F.cross_entropy(pred_bev, data['bev'], weight=weight).mean()
 
-        loss_wp = torch.mean(torch.abs(pred_wp - ego_waypoint))
+        loss_wp = torch.mean(torch.abs(pred_wp - data['ego_waypoint']))
         loss.update({
             "loss_wp": loss_wp,
             "loss_bev": loss_bev
@@ -673,16 +674,16 @@ class LidarCenterNet(nn.Module):
 
         preds = self.head([features[0]])
 
-        gt_labels = torch.zeros_like(label[:, :, 0])
-        gt_bboxes_ignore = label.sum(dim=-1) == 0.
+        gt_labels = torch.zeros_like(data['label'][:, :, 0])
+        gt_bboxes_ignore = data['label'].sum(dim=-1) == 0.
         loss_bbox = self.head.loss(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6],
-                                [label], gt_labels=[gt_labels], gt_bboxes_ignore=[gt_bboxes_ignore], img_metas=None)
+                                [data['label']], gt_labels=[gt_labels], gt_bboxes_ignore=[gt_bboxes_ignore], img_metas=None)
         
         loss.update(loss_bbox)
         pred_semantic = self.seg_decoder(image_features_grid)
         pred_depth = self.depth_decoder(image_features_grid)
-        loss_semantic = self.config.ls_seg * F.cross_entropy(pred_semantic, semantic).mean()
-        loss_depth = self.config.ls_depth * F.l1_loss(pred_depth, depth).mean()
+        loss_semantic = self.config.ls_seg * F.cross_entropy(pred_semantic, data['semantic']).mean()
+        loss_depth = self.config.ls_depth * F.l1_loss(pred_depth, data['depth']).mean()
         loss.update({
             "loss_depth": loss_depth,
             "loss_semantic": loss_semantic
@@ -694,9 +695,9 @@ class LidarCenterNet(nn.Module):
                 results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
                 bboxes, _ = results[0]
                 bboxes = bboxes[bboxes[:, -1] > self.config.bb_confidence_threshold]
-                self.visualize_model_io(save_path, self.i, self.config, rgb, lidar_bev, target_point,
+                self.visualize_model_io(save_path, self.i, self.config, data['rgb'], data['lidar'], data['target_point'],
                                    pred_wp, pred_bev, pred_semantic, pred_depth, bboxes, self.device,
-                                   gt_bboxes=label, expert_waypoints=ego_waypoint, stuck_detector=0, forced_move=False)
+                                   gt_bboxes=data['label'], expert_waypoints=data['ego_waypoint'], stuck_detector=0, forced_move=False)
 
         return loss
 
