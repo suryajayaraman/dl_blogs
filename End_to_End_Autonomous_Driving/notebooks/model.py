@@ -690,7 +690,7 @@ class LidarCenterNet(nn.Module):
         })
 
         self.i += 1
-        if ((self.config.debug == True) and (self.i % self.config.train_debug_save_freq == 0) and (save_path != None)):
+        if ((self.config.debug == True)):
             with torch.no_grad():
                 results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
                 bboxes, _ = results[0]
