@@ -632,10 +632,10 @@ class LidarCenterNet(nn.Module):
 
             debug_outputs = {
                 'pred_wp' : pred_wp.detach().cpu().numpy(),
-                'pred_semantic' : pred_semantic,
-                'pred_depth' : pred_depth,
-                'bboxes' : bboxes,
-                'pred_bev' : pred_bev
+                'pred_semantic' : pred_semantic.detach().cpu().numpy(),
+                'pred_depth' : pred_depth.detach().cpu().numpy(),
+                'bboxes' : bboxes.detach().cpu().numpy(),
+                'pred_bev' : pred_bev.detach().cpu().numpy()
             }
             return loss, debug_outputs
 
