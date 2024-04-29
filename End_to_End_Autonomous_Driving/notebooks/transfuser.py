@@ -445,6 +445,9 @@ class SelfAttention(nn.Module):
         self.proj = nn.Linear(n_embd, n_embd)
         self.n_head = n_head
 
+        # attention map
+        self.attn_map = None
+
     def forward(self, x):
         B, T, C = x.size()
 
@@ -456,6 +459,7 @@ class SelfAttention(nn.Module):
         # self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
         att = F.softmax(att, dim=-1)
+        self.attn_map = att.detach().cpu().numpy()
         att = self.attn_drop(att)
         y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side

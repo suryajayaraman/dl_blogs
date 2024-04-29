@@ -2,6 +2,7 @@ import cv2
 from collections import deque
 from copy import deepcopy
 from PIL import Image, ImageFont, ImageDraw
+import pickle
 
 import torch
 import torch.nn as nn
@@ -508,25 +509,6 @@ class LidarCenterNetHead(BaseDenseHead, BBoxTestMixin):
         return out_bboxes, out_labels
 
 
-class PIDController(object):
-    def __init__(self, K_P=1.0, K_I=0.0, K_D=0.0, n=20):
-        self._K_P = K_P
-        self._K_I = K_I
-        self._K_D = K_D
-        self._window = deque([0 for _ in range(n)], maxlen=n)
-
-    def step(self, error):
-        self._window.append(error)
-
-        if len(self._window) >= 2:
-            integral = np.mean(self._window)
-            derivative = (self._window[-1] - self._window[-2])
-        else:
-            integral = 0.0
-            derivative = 0.0
-
-        return self._K_P * error + self._K_I * integral + self._K_D * derivative
-
 
 class LidarCenterNet(nn.Module):
     """
@@ -573,10 +555,6 @@ class LidarCenterNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.output = nn.Linear(self.config.gru_hidden_size, 3).to(self.device)
 
-        # pid controller
-        self.turn_controller = PIDController(K_P=config.turn_KP, K_I=config.turn_KI, K_D=config.turn_KD, n=config.turn_n)
-        self.speed_controller = PIDController(K_P=config.speed_KP, K_I=config.speed_KI, K_D=config.speed_KD, n=config.speed_n)
-
     def forward_gru(self, z, target_point):
         z = self.join(z)
     
@@ -606,58 +584,14 @@ class LidarCenterNet(nn.Module):
 
         # pred the wapoints in the vehicle coordinate and we convert it to lidar coordinate here because the GT waypoints is in lidar coordinate
         pred_wp[:, :, 0] = pred_wp[:, :, 0] - self.config.lidar_pos[0]
-            
-        pred_brake = None
-        steer = None
-        throttle = None
-        brake = None
+        return pred_wp
 
-        return pred_wp, pred_brake, steer, throttle, brake
-
-    def control_pid(self, waypoints, velocity, is_stuck):
-        ''' Predicts vehicle control with a PID controller.
-        Args:
-            waypoints (tensor): output of self.plan()
-            velocity (tensor): speedometer input
-        '''
-        assert(waypoints.size(0)==1)
-        waypoints = waypoints[0].data.cpu().numpy()
-        # when training we transform the waypoints to lidar coordinate, so we need to change is back when control
-        waypoints[:, 0] += self.config.lidar_pos[0]
-
-        speed = velocity[0].data.cpu().numpy()
-
-        desired_speed = np.linalg.norm(waypoints[0] - waypoints[1]) * 2.0
-
-        if is_stuck:
-            desired_speed = np.array(self.config.default_speed) # default speed of 14.4 km/h
-
-        brake = ((desired_speed < self.config.brake_speed) or ((speed / desired_speed) > self.config.brake_ratio))
-
-        delta = np.clip(desired_speed - speed, 0.0, self.config.clip_delta)
-        throttle = self.speed_controller.step(delta)
-        throttle = np.clip(throttle, 0.0, self.config.clip_throttle)
-        throttle = throttle if not brake else 0.0
-        aim = (waypoints[1] + waypoints[0]) / 2.0
-        angle = np.degrees(np.arctan2(aim[1], aim[0])) / 90.0
-        if (speed < 0.01):
-            angle = 0.0  # When we don't move we don't want the angle error to accumulate in the integral
-        if brake:
-            angle = 0.0
-        
-        steer = self.turn_controller.step(angle)
-
-        steer = np.clip(steer, -1.0, 1.0) #Valid steering values are in [-1,1]
-
-        return steer, throttle, brake
     
-    # def forward(self, rgb, lidar_bev, ego_waypoint, target_point, target_point_image, ego_vel, bev, label, depth, semantic, num_points=None, save_path=None, bev_points=None, cam_points=None):
-    def forward(self, data, save_path=None):
-        
+    def forward(self, data):        
         loss = {}
         data['lidar'] = torch.cat((data['lidar'], data['target_point_image']), dim=1)
         features, image_features_grid, fused_features = self._model(data['rgb'], data['lidar'], data['speed'])
-        pred_wp, _, _, _, _ = self.forward_gru(fused_features, data['target_point'])
+        pred_wp = self.forward_gru(fused_features, data['target_point'])
 
         # pred topdown view
         pred_bev = self.pred_bev(features[0])
@@ -695,205 +629,40 @@ class LidarCenterNet(nn.Module):
                 results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
                 bboxes, _ = results[0]
                 bboxes = bboxes[bboxes[:, -1] > self.config.bb_confidence_threshold]
-                self.visualize_model_io(save_path, self.i, self.config, data['rgb'], data['lidar'], data['target_point'],
-                                   pred_wp, pred_bev, pred_semantic, pred_depth, bboxes, self.device,
-                                   gt_bboxes=data['label'], expert_waypoints=data['ego_waypoint'], stuck_detector=0, forced_move=False)
 
-        return loss
+            debug_outputs = {
+                'pred_wp' : pred_wp.detach().cpu().numpy(),
+                'pred_semantic' : pred_semantic,
+                'pred_depth' : pred_depth,
+                'bboxes' : bboxes,
+                'pred_bev' : pred_bev
+            }
+            return loss, debug_outputs
 
+        else:
+            return loss
 
-    # this is different
-    def get_rotated_bbox(self, bbox):
-        x, y, w, h, yaw, speed, brake =  bbox
-
-        bbox = np.array([[h,   w, 1],
-                         [h,  -w, 1],
-                         [-h, -w, 1],
-                         [-h,  w, 1],
-                         [0, 0, 1],
-                         [-h * speed * 0.5, 0, 1]])
-        bbox[:, :2] /= self.config.bounding_box_divisor
-        bbox[:, :2] = bbox[:, [1, 0]]
-
-        c, s = np.cos(yaw), np.sin(yaw)
-        # use y x because coordinate is changed
-        r1_to_world = np.array([[c, -s, x], [s, c, y], [0, 0, 1]])
-
-        bbox = r1_to_world @ bbox.T
-        bbox = bbox.T
-
-        return bbox, brake
-
-    def draw_bboxes(self, bboxes, image, color=(255, 255, 255), brake_color=(0, 0, 255)):
-        idx = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5]]
-        for bbox, brake in bboxes:
-            bbox = bbox.astype(np.int32)[:, :2]
-            for s, e in idx:
-                if brake >= self.config.draw_brake_threshhold:
-                    color = brake_color
-                else:
-                    color = color
-                # brake is true while still have high velocity
-                cv2.line(image, tuple(bbox[s]), tuple(bbox[e]), color=color, thickness=1)
-        return image
-
-
-    def draw_waypoints(self, label, waypoints, image, color = (255, 255, 255)):
-        waypoints = waypoints.detach().cpu().numpy()
-        label = label.detach().cpu().numpy()
-
-        for bbox, points in zip(label, waypoints):
-            x, y, w, h, yaw, speed, brake =  bbox
-            c, s = np.cos(yaw), np.sin(yaw)
-            # use y x because coordinate is changed
-            r1_to_world = np.array([[c, -s, x], [s, c, y], [0, 0, 1]])
-
-            # convert to image space
-            # need to negate y componet as we do for lidar points
-            # we directly construct points in the image coordiante
-            # for lidar, forward +x, right +y
-            #            x
-            #            +
-            #            |
-            #            |
-            #            |---------+y
-            #
-            # for image, ---------> x
-            #            |
-            #            |
-            #            +
-            #            y
-
-            points[:, 0] *= -1
-            points = points * self.config.pixels_per_meter
-            points = points[:, [1, 0]]
-            points = np.concatenate((points, np.ones_like(points[:, :1])), axis=-1)
-
-            points = r1_to_world @ points.T
-            points = points.T
-
-            points_to_draw = []
-            for point in points[:, :2]:
-                points_to_draw.append(point.copy())
-                point = point.astype(np.int32)
-                cv2.circle(image, tuple(point), radius=3, color=color, thickness=3)
-        return image
-
-
-    def draw_target_point(self, target_point, image, color = (255, 255, 255)):
-        target_point = target_point.copy()
-
-        target_point[1] += self.config.lidar_pos[0]
-        point = target_point * self.config.pixels_per_meter
-        point[1] *= -1
-        point[1] = self.config.lidar_resolution_width - point[1] #Might be LiDAR height
-        point[0] += int(self.config.lidar_resolution_height / 2.0) #Might be LiDAR width
-        point = point.astype(np.int32)
-        point = np.clip(point, 0, 512)
-        cv2.circle(image, tuple(point), radius=5, color=color, thickness=3)
-        return image
-
-    def visualize_model_io(self, save_path, step, config, rgb, lidar_bev, target_point,
-                        pred_wp, pred_bev, pred_semantic, pred_depth, bboxes, device,
-                        gt_bboxes=None, expert_waypoints=None, stuck_detector=0, forced_move=False):
-        font = ImageFont.load_default()
-        i = 0 # We only visualize the first image if there is a batch of them.
-        if config.multitask:
-            classes_list = config.classes_list
-            converter = np.array(classes_list)
-
-            depth_image = pred_depth[i].detach().cpu().numpy()
-
-            indices = np.argmax(pred_semantic.detach().cpu().numpy(), axis=1)
-            semantic_image = converter[indices[i, ...], ...].astype('uint8')
-
-            ds_image = np.stack((depth_image, depth_image, depth_image), axis=2)
-            ds_image = (ds_image * 255).astype(np.uint8)
-            ds_image = np.concatenate((ds_image, semantic_image), axis=0)
-            ds_image = cv2.resize(ds_image, (640, 256))
-            ds_image = np.concatenate([ds_image, np.zeros_like(ds_image[:50])], axis=0)
-
-        images = np.concatenate(list(lidar_bev.detach().cpu().numpy()[i][:2]), axis=1)
-        images = (images * 255).astype(np.uint8)
-        images = np.stack([images, images, images], axis=-1)
-        images = np.concatenate([images, np.zeros_like(images[:50])], axis=0)
-
-        # draw bbox GT
-        if (not (gt_bboxes is None)):
-            rotated_bboxes_gt = []
-            for bbox in gt_bboxes.detach().cpu().numpy()[i]:
-                bbox = self.get_rotated_bbox(bbox)
-                rotated_bboxes_gt.append(bbox)
-            images = self.draw_bboxes(rotated_bboxes_gt, images, color=(0, 255, 0), brake_color=(0, 255, 128))
-
-        rotated_bboxes = []
-        for bbox in bboxes.detach().cpu().numpy():
-            bbox = self.get_rotated_bbox(bbox[:7])
-            rotated_bboxes.append(bbox)
-        images = self.draw_bboxes(rotated_bboxes, images, color=(255, 0, 0), brake_color=(0, 255, 255))
-
-        label = torch.zeros((1, 1, 7)).to(device)
-        label[:, -1, 0] = 128.
-        label[:, -1, 1] = 256.
-
-        if not expert_waypoints is None:
-            images = self.draw_waypoints(label[0], expert_waypoints[i:i+1], images, color=(0, 0, 255))
-
-        images = self.draw_waypoints(label[0], deepcopy(pred_wp[i:i + 1, 2:]), images, color=(255, 255, 255)) # Auxliary waypoints in white
-        images = self.draw_waypoints(label[0], deepcopy(pred_wp[i:i + 1, :2]), images, color=(255, 0, 0))     # First two, relevant waypoints in blue
-
-        # draw target points
-        images = self.draw_target_point(target_point[i].detach().cpu().numpy(), images)
-
-        # stuck text
-        images = Image.fromarray(images)
-        draw = ImageDraw.Draw(images)
-        draw.text((10, 0), "stuck detector:   %04d" % (stuck_detector), font=font)
-        draw.text((10, 30), "forced move:      %s" % (" True" if forced_move else "False"), font=font,
-                  fill=(255, 0, 0, 255) if forced_move else (255, 255, 255, 255))
-        images = np.array(images)
-
-        bev = pred_bev[i].detach().cpu().numpy().argmax(axis=0) / 2.
-        bev = np.stack([bev, bev, bev], axis=2) * 255.
-        bev_image = bev.astype(np.uint8)
-        bev_image = cv2.resize(bev_image, (256, 256))
-        bev_image = np.concatenate([bev_image, np.zeros_like(bev_image[:50])], axis=0)
-
-        if not expert_waypoints is None:
-            bev_image = self.draw_waypoints(label[0], expert_waypoints[i:i+1], bev_image, color=(0, 0, 255))
-
-        bev_image = self.draw_waypoints(label[0], deepcopy(pred_wp[i:i + 1, 2:]), bev_image, color=(255, 255, 255))
-        bev_image = self.draw_waypoints(label[0], deepcopy(pred_wp[i:i + 1, :2]), bev_image, color=(255, 0, 0))
-
-        bev_image = self.draw_target_point(target_point[i].detach().cpu().numpy(), bev_image)
-
-        if (not (expert_waypoints is None)):
-            aim = expert_waypoints[i:i + 1, :2].detach().cpu().numpy()[0].mean(axis=0)
-            expert_angle = np.degrees(np.arctan2(aim[1], aim[0] + self.config.lidar_pos[0]))
-
-            aim = pred_wp[i:i + 1, :2].detach().cpu().numpy()[0].mean(axis=0)
-            ego_angle = np.degrees(np.arctan2(aim[1], aim[0] + self.config.lidar_pos[0]))
-            angle_error = normalize_angle_degree(expert_angle - ego_angle)
-
-            bev_image = Image.fromarray(bev_image)
-            draw = ImageDraw.Draw(bev_image)
-            draw.text((0, 0), "Angle error:        %.2f°" % (angle_error), font=font)
-
-        bev_image = np.array(bev_image)
-
-        rgb_image = rgb[i].permute(1, 2, 0).detach().cpu().numpy()[:, :, [2, 1, 0]]
-        rgb_image = cv2.resize(rgb_image, (1280 + 128, 320 + 32))
-        assert (config.multitask)
-        images = np.concatenate((bev_image, images, ds_image), axis=1)
-
-        images = np.concatenate((rgb_image, images), axis=0)
-
-        cv2.imwrite(str(save_path + ("/%d.png" % (step // 2))), images)
 
 if __name__ == "__main__":
     root_dir = '/home/surya/Downloads/transfuser-2022/data/'
     config = GlobalConfig(root_dir=root_dir, setting='all')
+    # config.debug = True
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
     model = LidarCenterNet(config, device, config.backbone, image_architecture='regnety_032', 
                            lidar_architecture='regnety_032', use_velocity=False)
     print('Model created')
+
+    with open('/home/surya/git/dl_blogs/End_to_End_Autonomous_Driving/notebooks/transfuser_sample_data.pickle', 'rb') as infile:
+        data = pickle.load(infile)
+    
+
+    # load data to gpu, according to type
+    for k in ['rgb', 'depth', 'lidar', 'label', 'ego_waypoint', \
+                'target_point', 'target_point_image', 'speed']:
+        data[k] = data[k].to(device, torch.float32)
+    for k in ['semantic', 'bev']:
+        data[k] = data[k].to(device, torch.long)
+
+    # forward pass, store losses
+    losses = model(data)
+    print(model._model.transformer1.blocks[0].attn.attn_map.shape)
