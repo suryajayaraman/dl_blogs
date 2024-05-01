@@ -90,7 +90,8 @@ class CARLA_Data(Dataset):
 
         # load RGB image, scale to resolution, change to (C, H, W) format
         rgb_image = cv2.imread(str(self.images[index], encoding='utf-8'), cv2.IMREAD_COLOR)
-        data['rgb'] = crop_image_cv2(rgb_image, crop=self.img_resolution, crop_shift=0)
+        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        data['rgb'] = crop_image_cv2(rgb_image, crop=self.img_resolution, channelFirst = True)
 
         # BEV image -> load, decode, crop 
         bev_array = cv2.imread(str(self.bevs[index], encoding='utf-8'), cv2.IMREAD_UNCHANGED)
@@ -101,11 +102,12 @@ class CARLA_Data(Dataset):
 
         # Depth image
         depth_image = cv2.imread(str(self.depths[index], encoding='utf-8'), cv2.IMREAD_COLOR)
-        data['depth'] = get_depth(crop_image_cv2(depth_image, crop=self.img_resolution, crop_shift=0))
+        depth_image = cv2.cvtColor(depth_image, cv2.COLOR_BGR2RGB)
+        data['depth'] = get_depth(crop_image_cv2(depth_image, crop=self.img_resolution, channelFirst = True))
 
         # Semantic segmented image
         semantic_image = cv2.imread(str(self.semantics[index], encoding='utf-8'), cv2.IMREAD_UNCHANGED)
-        data['semantic'] = self.converter[crop_seg(semantic_image, crop=self.img_resolution, crop_shift=0)]
+        data['semantic'] = self.converter[crop_image_cv2(semantic_image, crop=self.img_resolution)]
 
         # vehicle measurements
         with open(str(self.measurements[index], encoding='utf-8'), 'r') as f1:
@@ -324,7 +326,7 @@ def parse_labels(labels, rad=0):
     return bboxes
 
 
-def crop_image_cv2(image, crop=(128, 640), crop_shift=0):
+def crop_image_cv2(image, crop=(128, 640), channelFirst=False):
     """
     Scale and crop a PIL image, returning a channels-first numpy array.
     """
@@ -334,29 +336,11 @@ def crop_image_cv2(image, crop=(128, 640), crop_shift=0):
     start_y = height // 2 - crop_h // 2
     start_x = width // 2 - crop_w // 2
 
-    # only shift for x direction
-    start_x += int(crop_shift)
-
     cropped_image = image[start_y:start_y + crop_h, start_x:start_x + crop_w]
-    cropped_image = np.transpose(cropped_image, (2, 0, 1))
+    if channelFirst:
+        cropped_image = np.transpose(cropped_image, (2, 0, 1))
     return cropped_image
 
-
-def crop_seg(image, crop=(128, 640), crop_shift=0):
-    """
-    Scale and crop a seg image, returning a channels-first numpy array.
-    """
-    width = image.shape[1]
-    height = image.shape[0]
-    crop_h, crop_w = crop
-
-    start_y = height//2 - crop_h//2
-    start_x = width//2 - crop_w//2
-    # only shift for x direction
-    start_x += int(crop_shift)
-
-    cropped_image = image[start_y:start_y+crop_h, start_x:start_x+crop_w]
-    return cropped_image
 
 def load_crop_bev_npy(bev_array, degree):
     """
