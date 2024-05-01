@@ -14,7 +14,7 @@ from utils import get_vehicle_to_virtual_lidar_transform, \
 
 
 class CARLA_Data(Dataset):
-    def __init__(self, root, config : GlobalConfig):
+    def __init__(self, root, config : GlobalConfig, routeKey = None):
         self.seq_len = np.array(config.seq_len)
         self.pred_len = np.array(config.pred_len)
         self.img_resolution = np.array(config.img_resolution)
@@ -29,41 +29,47 @@ class CARLA_Data(Dataset):
         self.labels = []
         self.measurements = []
 
-        for sub_root in tqdm(root, file=sys.stdout):
-            sub_root = Path(sub_root)
+        # each route ~= video sequence with all sensor data
+        routes = sorted(os.listdir(root))
 
-            # list sub-directories in root
-            root_files = os.listdir(sub_root)
-            routes = [folder for folder in root_files if not os.path.isfile(os.path.join(sub_root,folder))]
-            for route in routes:
-                route_dir = sub_root / route
-                num_seq = len(os.listdir(route_dir / "lidar"))
+        # filter by route, if key is provided
+        if routeKey is not None:
+            routes = [x for x in routes if routeKey in x]
 
-                # ignore the first two and last two frame
-                for seq in range(2, num_seq - self.pred_len - self.seq_len - 2):
-                    # load input seq and pred seq jointly
-                    image = route_dir / "rgb" / ("%04d.png" % (seq))
-                    bev = route_dir / "topdown" / ("encoded_%04d.png" % (seq))
-                    depth = route_dir / "depth" / ("%04d.png" % (seq))
-                    semantic = route_dir / "semantics" / ("%04d.png" % (seq))
-                    lidar = route_dir / "lidar" / ("%04d.npy" % (seq))
-                    measurement = route_dir / "measurements" / ("%04d.json"%(seq))
+        # create absolute path
+        routes = [os.path.join(root,x) for x in routes]
 
-                    # Additionally load future labels of the waypoints
-                    label = []                        
-                    for idx in range(self.seq_len + self.pred_len):
-                        label.append(route_dir / "label_raw" / ("%04d.json" % (seq + idx)))
+        for route_dir_str in tqdm(routes, file=sys.stdout):
+            route_dir = Path(route_dir_str)
+            num_seq = len(os.listdir(route_dir / "lidar"))
 
-                    self.images.append(image)
-                    self.bevs.append(bev)
-                    self.depths.append(depth)
-                    self.semantics.append(semantic)
-                    self.lidars.append(lidar)
-                    self.labels.append(label)
-                    self.measurements.append(measurement)
+            # ignore the first two and last two frame
+            for seq in range(2, num_seq - self.pred_len - self.seq_len - 2):
+                # load input seq and pred seq jointly
+                image = route_dir / "rgb" / ("%04d.png" % (seq))
+                bev = route_dir / "topdown" / ("encoded_%04d.png" % (seq))
+                depth = route_dir / "depth" / ("%04d.png" % (seq))
+                semantic = route_dir / "semantics" / ("%04d.png" % (seq))
+                lidar = route_dir / "lidar" / ("%04d.npy" % (seq))
+                measurement = route_dir / "measurements" / ("%04d.json"%(seq))
 
-        # There is a complex "memory leak"/performance issue when using Python objects like lists in a Dataloader that is loaded with multiprocessing, num_workers > 0
-        # A summary of that ongoing discussion can be found here https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
+                # Additionally load future labels of the waypoints
+                label = []                        
+                for idx in range(self.seq_len + self.pred_len):
+                    label.append(route_dir / "label_raw" / ("%04d.json" % (seq + idx)))
+
+                self.images.append(image)
+                self.bevs.append(bev)
+                self.depths.append(depth)
+                self.semantics.append(semantic)
+                self.lidars.append(lidar)
+                self.labels.append(label)
+                self.measurements.append(measurement)
+
+        # There is a complex "memory leak"/performance issue when using Python objects like 
+        # lists in a Dataloader that is loaded with multiprocessing, num_workers > 0
+        # A summary of that ongoing discussion can be found here 
+        # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
         # A workaround is to store the string lists as numpy byte objects because they only have 1 refcount.
         self.images       = np.array(self.images      ).astype(np.string_)
         self.bevs         = np.array(self.bevs        ).astype(np.string_)
@@ -72,7 +78,6 @@ class CARLA_Data(Dataset):
         self.lidars       = np.array(self.lidars      ).astype(np.string_)
         self.labels       = np.array(self.labels      ).astype(np.string_)
         self.measurements = np.array(self.measurements).astype(np.string_)
-        print("Loading %d lidars from %d folders"%(len(self.lidars), len(root)))
 
     def __len__(self):
         """Returns the length of the dataset. """
@@ -318,34 +323,6 @@ def parse_labels(labels, rad=0):
         bboxes[result['id']] = bbox
     return bboxes
 
-def scale_image(image, scale):
-    (width, height) = (int(image.width // scale), int(image.height // scale))
-    im_resized = image.resize((width, height))
-    return im_resized
-
-def scale_image_cv2(image, scale):
-    (width, height) = (int(image.shape[1] // scale), int(image.shape[0] // scale))
-    im_resized = cv2.resize(image, (width, height))
-    return im_resized
-
-def crop_image(image, crop=(128, 640), crop_shift=0):
-    """
-    Scale and crop a PIL image, returning a channels-first numpy array.
-    """
-    width = image.width
-    height = image.height
-    crop_h, crop_w = crop
-    start_y = height//2 - crop_h//2
-    start_x = width//2 - crop_w//2
-    
-    # only shift for x direction
-    start_x += int(crop_shift)
-
-    image = np.asarray(image)
-    cropped_image = image[start_y:start_y+crop_h, start_x:start_x+crop_w]
-    cropped_image = np.transpose(cropped_image, (2,0,1))
-    return cropped_image
-
 
 def crop_image_cv2(image, crop=(128, 640), crop_shift=0):
     """
@@ -429,8 +406,6 @@ def draw_target_point(target_point, color = (255, 255, 255)):
 
 
 def decode_pil_to_npy(img):
-    """
-    """
     (channels, width, height) = (15, img.shape[1], img.shape[2])
 
     bev_array = np.zeros([channels, width, height])
@@ -444,9 +419,9 @@ def decode_pil_to_npy(img):
 
 
 if __name__ == "__main__":
-    root_dir = '/home/surya/Downloads/transfuser-2022/data/'
-    config = GlobalConfig(root_dir=root_dir, setting='all')
-    train_set = CARLA_Data(root=config.train_data, config=config)
+    root_dir = '/home/surya/Downloads/transfuser-2022/data/demo/scenario1/'
+    config = GlobalConfig()
+    train_set = CARLA_Data(root=root_dir, config=config, routeKey='route0')
     print(len(train_set))
     sample = train_set[0]
     print('sample data loaded')

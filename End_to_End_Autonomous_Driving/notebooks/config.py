@@ -202,20 +202,3 @@ class GlobalConfig:
     brake_ratio = 1.1 # ratio of speed to desired speed at which brake is triggered
     clip_delta = 0.25 # maximum change in speed input to logitudinal controller
     clip_throttle = 0.75 # Maximum throttle allowed by the controller
-
-    def __init__(self, root_dir='', setting='all'):
-        self.root_dir = root_dir
-        if (setting == 'all'): # All towns used for training no validation data
-            self.train_towns = os.listdir(self.root_dir)
-            self.val_towns = [self.train_towns[0]]
-            self.train_data, self.val_data = [], []
-            for town in self.train_towns:
-                root_files = os.listdir(os.path.join(self.root_dir, town)) #Town folders
-                for file in root_files:
-                    if not os.path.isfile(os.path.join(self.root_dir, file)):
-                        self.train_data.append(os.path.join(self.root_dir, town, file))
-            for town in self.val_towns:
-                root_files = os.listdir(os.path.join(self.root_dir, town))
-                for file in root_files:
-                    if not os.path.isfile(os.path.join(self.root_dir, file)):
-                        self.val_data.append(os.path.join(self.root_dir, town, file))
