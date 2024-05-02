@@ -628,14 +628,15 @@ class LidarCenterNet(nn.Module):
             with torch.no_grad():
                 results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
                 batch_detections = [x[0].detach().cpu().numpy() for x in results]
-                batch_detections = [x[x[:, -1] > self.config.bb_confidence_threshold] for x in batch_detections]
+                batch_detections = [x[x[:, -1] > self.config.bb_confidence_threshold][:, :7] for x in batch_detections]
 
             debug_outputs = {
                 'pred_wp' : pred_wp.detach().cpu().numpy(),
                 'pred_semantic' : pred_semantic.detach().cpu().numpy(),
                 'pred_depth' : pred_depth.detach().cpu().numpy(),
                 'detections' : batch_detections,
-                'pred_bev' : pred_bev.detach().cpu().numpy()
+                'pred_bev' : pred_bev.detach().cpu().numpy(),
+                'attn_map' : self._model.transformer4.blocks[-1].attn.attn_map
             }
             return loss, debug_outputs
 
