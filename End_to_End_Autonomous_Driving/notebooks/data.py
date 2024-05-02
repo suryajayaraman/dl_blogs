@@ -113,9 +113,8 @@ class CARLA_Data(Dataset):
         with open(str(self.measurements[index], encoding='utf-8'), 'r') as f1:
             measurements = ujson.load(f1)
 
-        for k in ['steer', 'throttle', 'brake', 'speed', 'theta', 'x_command', 'y_command']:
+        for k in ['speed', 'x_command', 'y_command']:
             data[k] = measurements[k]
-        data['light'] = measurements['light_hazard']
 
         # target points
         # convert x_command, y_command to local coordinates

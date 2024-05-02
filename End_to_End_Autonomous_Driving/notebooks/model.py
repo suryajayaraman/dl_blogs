@@ -627,14 +627,14 @@ class LidarCenterNet(nn.Module):
         if ((self.config.debug == True)):
             with torch.no_grad():
                 results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
-                bboxes, _ = results[0]
-                bboxes = bboxes[bboxes[:, -1] > self.config.bb_confidence_threshold]
+                batch_detections = [x[0].detach().cpu().numpy() for x in results]
+                batch_detections = [x[x[:, -1] > self.config.bb_confidence_threshold] for x in batch_detections]
 
             debug_outputs = {
                 'pred_wp' : pred_wp.detach().cpu().numpy(),
                 'pred_semantic' : pred_semantic.detach().cpu().numpy(),
                 'pred_depth' : pred_depth.detach().cpu().numpy(),
-                'bboxes' : bboxes.detach().cpu().numpy(),
+                'detections' : batch_detections,
                 'pred_bev' : pred_bev.detach().cpu().numpy()
             }
             return loss, debug_outputs
@@ -644,8 +644,8 @@ class LidarCenterNet(nn.Module):
 
 
 if __name__ == "__main__":
-    root_dir = '/home/surya/Downloads/transfuser-2022/data/'
-    config = GlobalConfig(root_dir=root_dir, setting='all')
+    root_dir = '/home/surya/Downloads/transfuser-2022/data/train/'
+    config = GlobalConfig()
     # config.debug = True
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
     model = LidarCenterNet(config, device, config.backbone, image_architecture='regnety_032', 
@@ -664,5 +664,6 @@ if __name__ == "__main__":
         data[k] = data[k].to(device, torch.long)
 
     # forward pass, store losses
+    model.config.debug = True
     losses = model(data)
     print(model._model.transformer1.blocks[0].attn.attn_map.shape)
