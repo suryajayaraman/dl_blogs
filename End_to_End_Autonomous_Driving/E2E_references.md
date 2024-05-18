@@ -3,6 +3,8 @@
 ## Research papers
 - [End-to-end Autonomous Driving: Challenges and Frontiers](https://arxiv.org/pdf/2306.16927.pdf)
 - [A Survey of End-to-End Driving: Architectures and Training Methods](https://arxiv.org/pdf/2003.06404.pdf)
+- [NeuroNCAP: Photorealistic Closed-loop Safety Testing for Autonomous Driving](https://arxiv.org/pdf/2404.07762)
+- [DriveGPT4 Interpretable End-to-end Autonomous Driving via Large Language Model](https://arxiv.org/pdf/2310.01412v4)
 - [Recent Advancements in End-to-End Autonomous Driving using Deep Learning: A Survey](https://arxiv.org/pdf/2307.04370.pdf)
 - [Planning-oriented Autonomous Driving](https://arxiv.org/abs/2212.10156)
 - [ST-P3 Spatio Temporal Feature Learning](https://arxiv.org/pdf/2207.07601.pdf)
