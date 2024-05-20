@@ -19,3 +19,4 @@
 - [Deformable attention](https://github.com/lucidrains/deformable-attention)
 - [Vision Transformer with Deformable attention](https://github.com/LeapLabTHU/DAT)
 - [ViT pytorch official implementation](https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py)
+- [Facebook XCIT](https://github.com/facebookresearch/xcit)
