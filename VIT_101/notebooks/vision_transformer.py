@@ -292,7 +292,7 @@ class DINOHead(nn.Module):
 
 
 if __name__ == "__main__":
-    test_data = torch.Tensor(1, 3, 224, 224)
-    model = vit_tiny()
+    test_data = torch.Tensor(1, 3, 256, 512)
+    model = vit_small(num_classes=0)
     output = model(test_data)
     print(output.shape)
