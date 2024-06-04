@@ -5,6 +5,11 @@
 - [ViT official paper](https://arxiv.org/abs/2010.11929)
 - [Attention Mechanisms in Computer Vision: A Survey](https://arxiv.org/pdf/2111.07624)
 - [DAT++](https://arxiv.org/pdf/2309.01430)
+- [A Survey of Visual Transformers](https://ieeexplore.ieee.org/document/10088164)
+- [A Survey on Visual Transformer](https://www.arxiv.org/pdf/2012.12556)
+- [Deformable convolutions v2](https://arxiv.org/pdf/1811.11168)
+- [XCiT - Cross-Covariance Image Transformers](https://arxiv.org/pdf/2106.09681)
+- [Neighbourhood Attention Transformer](https://arxiv.org/pdf/2204.07143)
 
 
 ## Blog posts / Lectures
@@ -20,3 +25,6 @@
 - [Vision Transformer with Deformable attention](https://github.com/LeapLabTHU/DAT)
 - [ViT pytorch official implementation](https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py)
 - [Facebook XCIT](https://github.com/facebookresearch/xcit)
+- [Cooperative Bird's Eye View Semantic Segmentation with Sparse Transformers](https://github.com/DerrickXuNu/CoBEVT)
+- [NATTEN package](https://github.com/SHI-Labs/NATTEN)
+- [Neighbourhood Attention Transformer](https://github.com/SHI-Labs/Neighborhood-Attention-Transformer/tree/main)
