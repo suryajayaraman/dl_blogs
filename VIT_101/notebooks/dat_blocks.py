@@ -208,7 +208,6 @@ class DAttentionBaseline(nn.Module):
 
         attn = F.softmax(attn, dim=2)
         self.attn = attn
-        print(attn.shape)
         attn = self.attn_drop(attn)
 
         out = torch.einsum('b m n, b c n -> b c m', attn, v)

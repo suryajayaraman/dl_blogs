@@ -122,7 +122,6 @@ class TransformerStage(nn.Module):
                 x0 = x
                 x, pos, ref = self.attns[d](self.layer_norms[2 * d](x))
                 if pos is not None and ref is not None:
-                    print(pos.shape[1:])
                     stage_deformed_keys.append(pos)
                 x = self.layer_scales[2 * d](x)
                 x = self.drop_path[d](x) + x0
@@ -130,7 +129,6 @@ class TransformerStage(nn.Module):
                 x = self.mlps[d](self.layer_norms[2 * d + 1](x))
                 x = self.layer_scales[2 * d + 1](x)
                 x = self.drop_path[d](x) + x0
-        print('-------------------')
         return x, stage_deformed_keys
 
 
