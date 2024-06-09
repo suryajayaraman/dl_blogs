@@ -10,12 +10,14 @@
 - [Deformable convolutions v2](https://arxiv.org/pdf/1811.11168)
 - [XCiT - Cross-Covariance Image Transformers](https://arxiv.org/pdf/2106.09681)
 - [Neighbourhood Attention Transformer](https://arxiv.org/pdf/2204.07143)
+- [Three things everyone should know about Vision Transformers](https://arxiv.org/pdf/2203.09795)
 
 
 ## Blog posts / Lectures
 - [Attention mechanism in computer vision](https://blog.paperspace.com/attention-mechanisms-in-computer-vision-cbam/)
 - [Layer Normalization](https://www.youtube.com/watch?v=2V3Uduw1zwQ)
 - [QKV explained](https://stats.stackexchange.com/questions/421935/what-exactly-are-keys-queries-and-values-in-attention-mechanisms)
+- [Neighbourhood attention transformer presentation](https://www.youtube.com/watch?v=Ya4BfioxIHA)
 
 
 ## Repositories / code
