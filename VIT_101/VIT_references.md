@@ -11,6 +11,7 @@
 - [XCiT - Cross-Covariance Image Transformers](https://arxiv.org/pdf/2106.09681)
 - [Neighbourhood Attention Transformer](https://arxiv.org/pdf/2204.07143)
 - [Three things everyone should know about Vision Transformers](https://arxiv.org/pdf/2203.09795)
+- [How to train your ViT](https://arxiv.org/pdf/2106.10270)
 
 
 ## Blog posts / Lectures
