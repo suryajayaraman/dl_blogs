@@ -19,7 +19,7 @@
 - [Layer Normalization](https://www.youtube.com/watch?v=2V3Uduw1zwQ)
 - [QKV explained](https://stats.stackexchange.com/questions/421935/what-exactly-are-keys-queries-and-values-in-attention-mechanisms)
 - [Neighbourhood attention transformer presentation](https://www.youtube.com/watch?v=Ya4BfioxIHA)
-
+- [All things VITs understanding and interpreting attention in vision](https://all-things-vits.github.io/atv/)
 
 ## Repositories / code
 - [Vision Attention](https://github.com/MenghaoGuo/Awesome-Vision-Attentions?tab=readme-ov-file)
