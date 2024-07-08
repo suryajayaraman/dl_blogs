@@ -14,12 +14,14 @@ from utils import get_vehicle_to_virtual_lidar_transform, \
 
 
 class CARLA_Data(Dataset):
-    def __init__(self, root, config : GlobalConfig, routeKey = None):
+    def __init__(self, root, config : GlobalConfig, routeKey = None, load_raw_lidar=False, max_points=10000):
         self.seq_len = np.array(config.seq_len)
         self.pred_len = np.array(config.pred_len)
         self.img_resolution = np.array(config.img_resolution)
         self.img_width = np.array(config.img_width)        
         self.converter = np.uint8(config.converter)
+        self.load_raw_lidar = load_raw_lidar
+        self.max_points = max_points
 
         self.images = []
         self.bevs = []
@@ -137,6 +139,16 @@ class CARLA_Data(Dataset):
         # load point cloud (XYZI), flip y-axis
         # compute Lidar BEV features
         lidars_pc = np.load(str(self.lidars[index], encoding='utf-8'), allow_pickle=True)[1] 
+        if(self.load_raw_lidar):
+            raw_pc = lidars_pc
+            raw_pc = raw_pc[:, [1,0,2]]
+            raw_pc = raw_pc[(raw_pc[..., 0] > 0) & (np.abs(raw_pc[..., 1]) < 30) & (raw_pc[..., 2] > -2.4)]
+            raw_pc_pad = np.zeros((self.max_points, 3), dtype=np.float32)
+            num_raw_lidar_points = min(self.max_points, raw_pc.shape[0]) 
+            raw_pc_pad[:num_raw_lidar_points, :] = raw_pc[:num_raw_lidar_points, :]
+            data['raw_lidar'] = raw_pc_pad
+            data['num_raw_lidar_points'] = num_raw_lidar_points
+
         lidars_pc[:, 1] *= -1
         data['lidar'] = lidar_to_histogram_features(lidars_pc)
 
