@@ -142,7 +142,11 @@ class CARLA_Data(Dataset):
         if(self.load_raw_lidar):
             raw_pc = lidars_pc
             raw_pc = raw_pc[:, [1,0,2]]
-            raw_pc = raw_pc[(raw_pc[..., 0] > 0) & (np.abs(raw_pc[..., 1]) < 30) & (raw_pc[..., 2] > -2.4)]
+            raw_pc = raw_pc[(raw_pc[..., 0] > 0) & 
+                            (raw_pc[..., 0] < 64) &
+                            (np.abs(raw_pc[..., 1]) < 30) & 
+                            (raw_pc[..., 2] > -2.4)
+                        ]
             raw_pc_pad = np.zeros((self.max_points, 3), dtype=np.float32)
             num_raw_lidar_points = min(self.max_points, raw_pc.shape[0]) 
             raw_pc_pad[:num_raw_lidar_points, :] = raw_pc[:num_raw_lidar_points, :]
