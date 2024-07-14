@@ -144,7 +144,7 @@ class TransfuserBackbone(nn.Module):
         image_embd_layer1 = self.avgpool_img(image_features)
         lidar_embd_layer1 = self.avgpool_lidar(lidar_features)
 
-        image_features_layer1, lidar_features_layer1 = self.transformer1(image_embd_layer1, lidar_embd_layer1, velocity)
+        image_features_layer1, lidar_features_layer1 = self.transformer1(image_embd_layer1, lidar_embd_layer1 )
         image_features_layer1 = F.interpolate(image_features_layer1, size=(image_features.shape[2],image_features.shape[3]), mode='bilinear', align_corners=False)
         lidar_features_layer1 = F.interpolate(lidar_features_layer1, size=(lidar_features.shape[2],lidar_features.shape[3]), mode='bilinear', align_corners=False)
         image_features = image_features + image_features_layer1
@@ -156,7 +156,7 @@ class TransfuserBackbone(nn.Module):
         # Image fusion at (B, 216, 32, 32)
         image_embd_layer2 = self.avgpool_img(image_features)
         lidar_embd_layer2 = self.avgpool_lidar(lidar_features)
-        image_features_layer2, lidar_features_layer2 = self.transformer2(image_embd_layer2, lidar_embd_layer2, velocity)
+        image_features_layer2, lidar_features_layer2 = self.transformer2(image_embd_layer2, lidar_embd_layer2)
         image_features_layer2 = F.interpolate(image_features_layer2, size=(image_features.shape[2],image_features.shape[3]), mode='bilinear', align_corners=False)
         lidar_features_layer2 = F.interpolate(lidar_features_layer2, size=(lidar_features.shape[2],lidar_features.shape[3]), mode='bilinear', align_corners=False)
         image_features = image_features + image_features_layer2
@@ -168,7 +168,7 @@ class TransfuserBackbone(nn.Module):
         # Image fusion at (B, 576, 16, 16)
         image_embd_layer3 = self.avgpool_img(image_features)
         lidar_embd_layer3 = self.avgpool_lidar(lidar_features)
-        image_features_layer3, lidar_features_layer3 = self.transformer3(image_embd_layer3, lidar_embd_layer3, velocity)
+        image_features_layer3, lidar_features_layer3 = self.transformer3(image_embd_layer3, lidar_embd_layer3)
         image_features_layer3 = F.interpolate(image_features_layer3, size=(image_features.shape[2],image_features.shape[3]), mode='bilinear', align_corners=False)
         lidar_features_layer3 = F.interpolate(lidar_features_layer3, size=(lidar_features.shape[2],lidar_features.shape[3]), mode='bilinear', align_corners=False)
         image_features = image_features + image_features_layer3
@@ -181,7 +181,7 @@ class TransfuserBackbone(nn.Module):
         image_embd_layer4 = self.avgpool_img(image_features)
         lidar_embd_layer4 = self.avgpool_lidar(lidar_features)
 
-        image_features_layer4, lidar_features_layer4 = self.transformer4(image_embd_layer4, lidar_embd_layer4, velocity)
+        image_features_layer4, lidar_features_layer4 = self.transformer4(image_embd_layer4, lidar_embd_layer4)
         image_features_layer4 = F.interpolate(image_features_layer4, size=(image_features.shape[2],image_features.shape[3]), mode='bilinear', align_corners=False)
         lidar_features_layer4 = F.interpolate(lidar_features_layer4, size=(lidar_features.shape[2],lidar_features.shape[3]), mode='bilinear', align_corners=False)
         image_features = image_features + image_features_layer4
@@ -319,7 +319,7 @@ class GPT(nn.Module):
             module.bias.data.zero_()
             module.weight.data.fill_(self.config.gpt_layer_norm_init_weight)
 
-    def forward(self, image_tensor, lidar_tensor, velocity):
+    def forward(self, image_tensor, lidar_tensor):
         """
         Args:
             image_tensor (tensor): B*4*seq_len, C, H, W
