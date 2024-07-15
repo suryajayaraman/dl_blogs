@@ -517,7 +517,7 @@ class LidarCenterNet(nn.Module):
         in_channels: input channels
     """
 
-    def __init__(self, config, device, backbone, image_architecture='resnet34', lidar_architecture='resnet18', use_velocity=True):
+    def __init__(self, config, device, backbone, image_architecture='resnet34', lidar_architecture='resnet18'):
         super().__init__()
         self.device = device
         self.config = config
@@ -525,7 +525,7 @@ class LidarCenterNet(nn.Module):
         self.use_target_point_image = config.use_target_point_image
         self.gru_concat_target_point = config.gru_concat_target_point
         self.backbone = backbone
-        self._model = TransfuserBackbone(config, image_architecture, lidar_architecture, use_velocity=use_velocity).to(self.device)
+        self._model = TransfuserBackbone(config, image_architecture, lidar_architecture).to(self.device)
         self.seg_decoder   = SegDecoder(self.config,   self.config.perception_output_features).to(self.device)
         self.depth_decoder = DepthDecoder(self.config, self.config.perception_output_features).to(self.device)
         channel = config.channel
@@ -650,7 +650,7 @@ if __name__ == "__main__":
     # config.debug = True
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
     model = LidarCenterNet(config, device, config.backbone, image_architecture='regnety_032', 
-                           lidar_architecture='regnety_032', use_velocity=False)
+                           lidar_architecture='regnety_032')
     print('Model created')
 
     with open('/home/surya/git/dl_blogs/End_to_End_Autonomous_Driving/notebooks/transfuser_sample_data.pickle', 'rb') as infile:

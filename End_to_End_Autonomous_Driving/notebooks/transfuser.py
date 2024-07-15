@@ -9,10 +9,9 @@ class TransfuserBackbone(nn.Module):
     Multi-scale Fusion Transformer for image + LiDAR feature fusion
     image_architecture: Architecture used in the image branch. ResNet, RegNet and ConvNext are supported
     lidar_architecture: Architecture used in the lidar branch. ResNet, RegNet and ConvNext are supported
-    use_velocity: Whether to use the velocity input in the transformer.
     """
 
-    def __init__(self, config, image_architecture='resnet34', lidar_architecture='resnet18', use_velocity=True):
+    def __init__(self, config, image_architecture='resnet34', lidar_architecture='resnet18'):
         super().__init__()
         self.config = config
 
@@ -39,7 +38,7 @@ class TransfuserBackbone(nn.Module):
                             embd_pdrop=config.embd_pdrop,
                             attn_pdrop=config.attn_pdrop,
                             resid_pdrop=config.resid_pdrop,
-                            config=config, use_velocity=use_velocity)
+                            config=config)
 
         self.transformer2 = GPT(n_embd=self.image_encoder.features.feature_info[2]['num_chs'],
                             n_head=config.n_head,
@@ -53,7 +52,7 @@ class TransfuserBackbone(nn.Module):
                             embd_pdrop=config.embd_pdrop,
                             attn_pdrop=config.attn_pdrop,
                             resid_pdrop=config.resid_pdrop,
-                            config=config, use_velocity=use_velocity)
+                            config=config)
 
         self.transformer3 = GPT(n_embd=self.image_encoder.features.feature_info[3]['num_chs'],
                             n_head=config.n_head,
@@ -67,7 +66,7 @@ class TransfuserBackbone(nn.Module):
                             embd_pdrop=config.embd_pdrop,
                             attn_pdrop=config.attn_pdrop,
                             resid_pdrop=config.resid_pdrop,
-                            config=config, use_velocity=use_velocity)
+                            config=config)
 
         self.transformer4 = GPT(n_embd=self.image_encoder.features.feature_info[4]['num_chs'],
                             n_head=config.n_head,
@@ -81,7 +80,7 @@ class TransfuserBackbone(nn.Module):
                             embd_pdrop=config.embd_pdrop,
                             attn_pdrop=config.attn_pdrop,
                             resid_pdrop=config.resid_pdrop,
-                            config=config, use_velocity=use_velocity)
+                            config=config)
 
         if(self.image_encoder.features.feature_info[4]['num_chs'] != self.config.perception_output_features):
             self.change_channel_conv_image = nn.Conv2d(self.image_encoder.features.feature_info[4]['num_chs'], self.config.perception_output_features, (1, 1))
@@ -282,7 +281,7 @@ class GPT(nn.Module):
                     img_vert_anchors, img_horz_anchors, 
                     lidar_vert_anchors, lidar_horz_anchors,
                     seq_len, 
-                    embd_pdrop, attn_pdrop, resid_pdrop, config, use_velocity=True):
+                    embd_pdrop, attn_pdrop, resid_pdrop, config):
         super().__init__()
         self.n_embd = n_embd
         self.seq_len = 1
