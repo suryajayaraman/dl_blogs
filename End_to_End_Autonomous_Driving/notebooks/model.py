@@ -1,7 +1,3 @@
-import cv2
-from collections import deque
-from copy import deepcopy
-from PIL import Image, ImageFont, ImageDraw
 import pickle
 
 import torch
@@ -517,10 +513,11 @@ class LidarCenterNet(nn.Module):
         in_channels: input channels
     """
 
-    def __init__(self, config, device, backbone, image_architecture='resnet34', lidar_architecture='resnet18'):
+    def __init__(self, config, device, backbone, image_architecture='resnet34', lidar_architecture='resnet18', estimate_loss = True):
         super().__init__()
         self.device = device
         self.config = config
+        self.estimate_loss = estimate_loss
         self.pred_len = config.pred_len
         self.use_target_point_image = config.use_target_point_image
         self.gru_concat_target_point = config.gru_concat_target_point
@@ -537,7 +534,6 @@ class LidarCenterNet(nn.Module):
 
         # prediction heads
         self.head = LidarCenterNetHead(channel, channel, 1, train_cfg=config).to(self.device)
-        self.i = 0
 
         # waypoints prediction
         self.join = nn.Sequential(
@@ -597,51 +593,54 @@ class LidarCenterNet(nn.Module):
         pred_bev = self.pred_bev(features[0])
         pred_bev = F.interpolate(pred_bev, (self.config.bev_resolution_height, self.config.bev_resolution_width), mode='bilinear', align_corners=True)
 
-        weight = torch.from_numpy(np.array([1., 1., 3.])).to(dtype=torch.float32, device=pred_bev.device)
-        loss_bev = F.cross_entropy(pred_bev, data['bev'], weight=weight).mean()
-
-        loss_wp = torch.mean(torch.abs(pred_wp - data['ego_waypoint']))
-        loss.update({
-            "loss_wp": loss_wp,
-            "loss_bev": loss_bev
-        })
-
-        preds = self.head([features[0]])
-
-        gt_labels = torch.zeros_like(data['label'][:, :, 0])
-        gt_bboxes_ignore = data['label'].sum(dim=-1) == 0.
-        loss_bbox = self.head.loss(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6],
-                                [data['label']], gt_labels=[gt_labels], gt_bboxes_ignore=[gt_bboxes_ignore], img_metas=None)
-        
-        loss.update(loss_bbox)
+        # depth and semantic segmentation prediction
         pred_semantic = self.seg_decoder(image_features_grid)
         pred_depth = self.depth_decoder(image_features_grid)
-        loss_semantic = self.config.ls_seg * F.cross_entropy(pred_semantic, data['semantic']).mean()
-        loss_depth = self.config.ls_depth * F.l1_loss(pred_depth, data['depth']).mean()
-        loss.update({
-            "loss_depth": loss_depth,
-            "loss_semantic": loss_semantic
-        })
 
-        self.i += 1
+        # 3d bounding boxes
+        preds = self.head([features[0]])
+        with torch.no_grad():
+            results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
+            batch_detections = [x[0].detach().cpu().numpy() for x in results]
+            batch_detections = [x[x[:, -1] > self.config.bb_confidence_threshold][:, :7] for x in batch_detections]
+
+        if self.estimate_loss:
+            weight = torch.from_numpy(np.array([1., 1., 3.])).to(dtype=torch.float32, device=pred_bev.device)
+            loss_bev = F.cross_entropy(pred_bev, data['bev'], weight=weight).mean()
+            loss_wp = torch.mean(torch.abs(pred_wp - data['ego_waypoint']))
+            loss.update({
+                "loss_wp": loss_wp,
+                "loss_bev": loss_bev
+            })
+
+            gt_labels = torch.zeros_like(data['label'][:, :, 0])
+            gt_bboxes_ignore = data['label'].sum(dim=-1) == 0.
+            loss_bbox = self.head.loss(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6],
+                                    [data['label']], gt_labels=[gt_labels], gt_bboxes_ignore=[gt_bboxes_ignore], img_metas=None)
+            
+            loss.update(loss_bbox)
+            loss_semantic = self.config.ls_seg * F.cross_entropy(pred_semantic, data['semantic']).mean()
+            loss_depth = self.config.ls_depth * F.l1_loss(pred_depth, data['depth']).mean()
+            loss.update({
+                "loss_depth": loss_depth,
+                "loss_semantic": loss_semantic
+            })
+        else:
+            pass
+
         if ((self.config.debug == True)):
-            with torch.no_grad():
-                results = self.head.get_bboxes(preds[0], preds[1], preds[2], preds[3], preds[4], preds[5], preds[6])
-                batch_detections = [x[0].detach().cpu().numpy() for x in results]
-                batch_detections = [x[x[:, -1] > self.config.bb_confidence_threshold][:, :7] for x in batch_detections]
-
             debug_outputs = {
                 'pred_wp' : pred_wp.detach().cpu().numpy(),
                 'pred_semantic' : pred_semantic.detach().cpu().numpy(),
                 'pred_depth' : pred_depth.detach().cpu().numpy(),
                 'detections' : batch_detections,
-                'pred_bev' : pred_bev.detach().cpu().numpy(),
-                'attn_map' : self._model.transformer4.blocks[-1].attn.attn_map
+                'pred_bev' : pred_bev.detach().cpu().numpy()
             }
-            return loss, debug_outputs
-
         else:
-            return loss
+            debug_outputs = {}
+
+        return loss, debug_outputs
+
 
 
 if __name__ == "__main__":
@@ -653,7 +652,7 @@ if __name__ == "__main__":
                            lidar_architecture='regnety_032')
     print('Model created')
 
-    with open('/home/surya/git/dl_blogs/End_to_End_Autonomous_Driving/notebooks/transfuser_sample_data.pickle', 'rb') as infile:
+    with open('notebooks/transfuser_sample_data.pickle', 'rb') as infile:
         data = pickle.load(infile)
     
 
