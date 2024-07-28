@@ -1,11 +1,10 @@
 import cv2
 import numpy as np
 from scipy.ndimage import zoom
-from typing import Callable, List, Optional, Tuple
+import matplotlib.pyplot as plt
+from typing import Callable, List, Tuple, Any
 
 import torch
-import ttach as tta
-from torchvision.transforms import Compose, Normalize, ToTensor
 
 
 class ActivationsAndGradients:
@@ -54,18 +53,6 @@ class ActivationsAndGradients:
     def release(self):
         for handle in self.handles:
             handle.remove()
-
-
-
-def preprocess_image(
-    img: np.ndarray, mean=[
-        0.5, 0.5, 0.5], std=[
-            0.5, 0.5, 0.5]) -> torch.Tensor:
-    preprocessing = Compose([
-        ToTensor(),
-        Normalize(mean=mean, std=std)
-    ])
-    return preprocessing(img.copy()).unsqueeze(0)
 
 
 def show_cam_on_image(img: np.ndarray,
@@ -142,47 +129,28 @@ def get_2d_projection(activation_batch):
 
 class BaseCAM:
     def __init__(self, model: torch.nn.Module, target_layers: List[torch.nn.Module],
-                 reshape_transform: Callable = None, compute_input_gradient: bool = False,
-                 uses_gradients: bool = True, tta_transforms: Optional[tta.Compose] = None,) -> None:
-        self.model = model.eval()
+                 reshape_transform: Callable = None) -> None:
+        self.model = model
         self.target_layers = target_layers
 
         # Use the same device as the model.
         self.device = next(self.model.parameters()).device
         self.reshape_transform = reshape_transform
-        self.compute_input_gradient = compute_input_gradient
-        self.uses_gradients = uses_gradients
-        if tta_transforms is None:
-            self.tta_transforms = tta.Compose(
-                [
-                    tta.HorizontalFlip(),
-                    tta.Multiply(factors=[0.9, 1, 1.1]),
-                ]
-            )
-        else:
-            self.tta_transforms = tta_transforms
-
         self.activations_and_grads = ActivationsAndGradients(self.model, target_layers, reshape_transform)
 
     """ Get a vector of weights for every channel in the target layer.
         Methods that return weights channels,
         will typically need to only implement this function. """
-
-    def get_cam_weights(self, input_tensor: torch.Tensor, target_layers: List[torch.nn.Module], 
+    def get_cam_weights(self, input_data: Any, target_layers: List[torch.nn.Module], 
                         targets: List[torch.nn.Module], activations: torch.Tensor, grads: torch.Tensor,) -> np.ndarray:
         raise Exception("Not Implemented")
 
 
-    def get_cam_image(
-        self,
-        input_tensor: torch.Tensor,
-        target_layer: torch.nn.Module,
-        targets: List[torch.nn.Module],
-        activations: torch.Tensor,
-        grads: torch.Tensor,
-        eigen_smooth: bool = False,
-    ) -> np.ndarray:
-        weights = self.get_cam_weights(input_tensor, target_layer, targets, activations, grads)
+    def get_cam_image(self, input_data: Any, target_layer: torch.nn.Module,
+                      targets: List[torch.nn.Module], activations: torch.Tensor, 
+                      grads: torch.Tensor, eigen_smooth: bool = False,) -> np.ndarray:
+        
+        weights = self.get_cam_weights(input_data, target_layer, targets, activations, grads)
         # 2D conv
         if len(activations.shape) == 4:
             weighted_activations = weights[:, :, None, None] * activations
@@ -198,17 +166,9 @@ class BaseCAM:
             cam = weighted_activations.sum(axis=1)
         return cam
 
-    def forward(
-        self, input_tensor: torch.Tensor, targets: List[torch.nn.Module], eigen_smooth: bool = False
-    ) -> np.ndarray:
-        input_tensor = input_tensor.to(self.device)
+    def forward(self, input_data: Any, targets: List[torch.nn.Module], eigen_smooth: bool = False, key = '') -> np.ndarray:
 
-        self.outputs = outputs = self.activations_and_grads(input_tensor)
-
-        if self.uses_gradients:
-            self.model.zero_grad()
-            loss = sum([target(output) for target, output in zip(targets, outputs)])
-            loss.backward(retain_graph=True)
+        self.outputs = self.activations_and_grads(input_data)
 
         # In most of the saliency attribution papers, the saliency is
         # computed with a single target layer.
@@ -219,25 +179,32 @@ class BaseCAM:
         # This gives you more flexibility in case you just want to
         # use all conv layers for example, all Batchnorm layers,
         # or something else.
-        cam_per_layer = self.compute_cam_per_layer(input_tensor, targets, eigen_smooth)
+        cam_per_layer = self.compute_cam_per_layer(input_data, targets, eigen_smooth, key)
         return self.aggregate_multi_layers(cam_per_layer)
 
-    def get_target_width_height(self, input_tensor: torch.Tensor) -> Tuple[int, int]:
-        if len(input_tensor.shape) == 4:
-            width, height = input_tensor.size(-1), input_tensor.size(-2)
-            return width, height
-        elif len(input_tensor.shape) == 5:
-            depth, width, height = input_tensor.size(-1), input_tensor.size(-2), input_tensor.size(-3)
-            return depth, width, height
+    def get_target_width_height(self, input: Any, key : str = '') -> Tuple[int, int]:
+        if(isinstance(input, dict)):
+            input_data = input.get(key, None)
         else:
-            raise ValueError("Invalid input_tensor shape. Only 2D or 3D images are supported.")
+            input_data = input
+        
+        if(input_data is not None):
+            if len(input_data.shape) == 4:
+                width, height = input_data.size(-1), input_data.size(-2)
+                return width, height
+            elif len(input_data.shape) == 5:
+                depth, width, height = input_data.size(-1), input_data.size(-2), input_data.size(-3)
+                return depth, width, height
+            else:
+                raise ValueError("Invalid input_data shape. Only 2D or 3D images are supported.")
+        else:
+            raise ValueError("Nan Input")
 
-    def compute_cam_per_layer(
-        self, input_tensor: torch.Tensor, targets: List[torch.nn.Module], eigen_smooth: bool
-    ) -> np.ndarray:
+
+    def compute_cam_per_layer(self, input: Any, targets: List[torch.nn.Module], eigen_smooth: bool, key : str = '') -> np.ndarray:
         activations_list = [a.cpu().data.numpy() for a in self.activations_and_grads.activations]
         grads_list = [g.cpu().data.numpy() for g in self.activations_and_grads.gradients]
-        target_size = self.get_target_width_height(input_tensor)
+        target_size = self.get_target_width_height(input, key)
 
         cam_per_target_layer = []
         # Loop over the saliency image from every layer
@@ -250,7 +217,7 @@ class BaseCAM:
             if i < len(grads_list):
                 layer_grads = grads_list[i]
 
-            cam = self.get_cam_image(input_tensor, target_layer, targets, layer_activations, layer_grads, eigen_smooth)
+            cam = self.get_cam_image(input, target_layer, targets, layer_activations, layer_grads, eigen_smooth)
             cam = np.maximum(cam, 0)
             scaled = scale_cam_image(cam, target_size)
             cam_per_target_layer.append(scaled[:, None, :])
@@ -263,39 +230,9 @@ class BaseCAM:
         result = np.mean(cam_per_target_layer, axis=1)
         return scale_cam_image(result)
 
-    def forward_augmentation_smoothing(
-        self, input_tensor: torch.Tensor, targets: List[torch.nn.Module], eigen_smooth: bool = False
-    ) -> np.ndarray:
-        cams = []
-        for transform in self.tta_transforms:
-            augmented_tensor = transform.augment_image(input_tensor)
-            cam = self.forward(augmented_tensor, targets, eigen_smooth)
-
-            # The ttach library expects a tensor of size BxCxHxW
-            cam = cam[:, None, :, :]
-            cam = torch.from_numpy(cam)
-            cam = transform.deaugment_mask(cam)
-
-            # Back to numpy float32, HxW
-            cam = cam.numpy()
-            cam = cam[:, 0, :, :]
-            cams.append(cam)
-
-        cam = np.mean(np.float32(cams), axis=0)
-        return cam
-
-    def __call__(
-        self,
-        input_tensor: torch.Tensor,
-        targets: List[torch.nn.Module] = None,
-        aug_smooth: bool = False,
-        eigen_smooth: bool = False,
-    ) -> np.ndarray:
-        # Smooth the CAM result with test time augmentation
-        if aug_smooth is True:
-            return self.forward_augmentation_smoothing(input_tensor, targets, eigen_smooth)
-
-        return self.forward(input_tensor, targets, eigen_smooth)
+    def __call__(self, input_data: Any, targets: List[torch.nn.Module] = None, 
+                 eigen_smooth: bool = False, key : str = '') -> np.ndarray:
+        return self.forward(input_data, targets, eigen_smooth, key)
 
     def __del__(self):
         self.activations_and_grads.release()
@@ -311,109 +248,90 @@ class BaseCAM:
             return True
 
 
-class GradCAM(BaseCAM):
-    def __init__(self, model, target_layers,
+class EigenCAM(BaseCAM):
+    def __init__(self, model, target_layers, 
                  reshape_transform=None):
-        super(
-            GradCAM,
-            self).__init__(
-            model,
-            target_layers,
-            reshape_transform)
+        super(EigenCAM, self).__init__(model,
+                                       target_layers,
+                                       reshape_transform)
 
-    def get_cam_weights(self,
-                        input_tensor,
-                        target_layer,
-                        target_category,
-                        activations,
-                        grads):
-        # 2D image
-        if len(grads.shape) == 4:
-            return np.mean(grads, axis=(2, 3))
-        
-        # 3D image
-        elif len(grads.shape) == 5:
-            return np.mean(grads, axis=(2, 3, 4))
-        
-        else:
-            raise ValueError("Invalid grads shape." 
-                             "Shape of grads should be 4 (2D image) or 5 (3D image).")
+    def get_cam_image(self,
+                      input_data,
+                      target_layer,
+                      target_category,
+                      activations,
+                      grads,
+                      eigen_smooth):
+        return get_2d_projection(activations)
 
 
 #######################################################
 
-import warnings
-warnings.filterwarnings('ignore')
-warnings.simplefilter('ignore')
-from torchvision.models.segmentation import deeplabv3_resnet50
 
-
-class SegmentationModelOutputWrapper(torch.nn.Module):
-    def __init__(self, model): 
-        super(SegmentationModelOutputWrapper, self).__init__()
-        self.model = model
-        
-    def forward(self, x):
-        return self.model(x)["out"]
-
-
-
-class SemanticSegmentationTarget:
-    def __init__(self, category, mask):
-        self.category = category
-        self.mask = torch.from_numpy(mask)
+class PlannerTarget:
+    def __init__(self, target_wp):
+        self.target_wp = target_wp
         if torch.cuda.is_available():
-            self.mask = self.mask.cuda()
+            self.target_wp = self.target_wp.cuda()
         
     def __call__(self, model_output):
-        return (model_output[self.category, :, : ] * self.mask).sum()
-
-
-sem_classes = [
-    '__background__', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
-    'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike',
-    'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'
-]
-sem_class_to_idx = {cls: idx for (idx, cls) in enumerate(sem_classes)}
-
-car_category = sem_class_to_idx["car"]
-
+        _, debug_outputs = model_output
+        l1_loss = torch.mean(torch.abs(torch.from_numpy(debug_outputs['pred_wp']) - self.target_wp))
+        return l1_loss
 
 
 if __name__ == "__main__":
 
-    import cv2
-    image = cv2.cvtColor( cv2.imread('notebooks/9606553_ccc7518589_z.jpg') , cv2.COLOR_BGR2RGB)
-    rgb_img = np.float32(image) / 255
-    input_tensor = preprocess_image(rgb_img,
-                                    mean=[0.485, 0.456, 0.406],
-                                    std=[0.229, 0.224, 0.225])
-    # Taken from the torchvision tutorial
-    # https://pytorch.org/vision/stable/auto_examples/plot_visualization_utils.html
-    model = deeplabv3_resnet50(pretrained=True, progress=False)
-    model = model.eval() 
-    model = SegmentationModelOutputWrapper(model)
-    output = model(input_tensor)
+    from config import GlobalConfig
+    root_dir = '~/Downloads/transfuser-2022/data/demo/scenario1/'
+    config = GlobalConfig()
 
-    normalized_masks = torch.nn.functional.softmax(output, dim=1).cpu()
-    car_mask = normalized_masks[0, :, :, :].argmax(axis=0).detach().cpu().numpy()
-    car_mask_float = np.float32(car_mask == car_category)
+    from data import CARLA_Data
+    demo_set = CARLA_Data(root=root_dir, config=config, routeKey='route0', load_raw_lidar=True)
+    print(f"There are {len(demo_set)} samples in Demo dataset")
+
+    from torch.utils.data import DataLoader
+    dataloader_demo = DataLoader(demo_set, shuffle=False, batch_size=2, num_workers=4)
 
 
-    # To apply a class activation method here, we need to decide about a few things:
-    #     - What layer (or layers) are we going to work with?
-    #     - What's going to be the target we want to maximize?
-    # 
-    # We're going to chose backbone.layer4 as an arbitrary choice that can be tuned.
-    # You can print(model) and see which other layers you might want to try.
-    # 
-    # As for the target, we're going to take all the pixels that belong to the "car" category, and sum their predictions.
-    
-    target_layers = [model.model.backbone.layer4]
-    targets = [SemanticSegmentationTarget(car_category, car_mask_float)]
-    with GradCAM(model=model, target_layers=target_layers) as cam:
-        grayscale_cam = cam(input_tensor=input_tensor,
-                            targets=targets)[0, :]
-        cam_image = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
-    
-    print(type(cam_image))
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+    from model import LidarCenterNet
+    model = LidarCenterNet(config, device, config.backbone, image_architecture='regnety_032', 
+                            lidar_architecture='regnety_032', estimate_loss=False)
+    model.to(device);
+    model.config.debug = True
+    checkpt = torch.load('~/Downloads/transfuser-2022/model_ckpt/transfuser/transfuser_regnet032_seed1_39.pth', map_location=device)
+    model.load_state_dict(checkpt)
+    model = model.eval();
+
+    # which layers should be focus on
+    target_layers = [model._model.image_encoder.features.layer4]
+
+
+    with EigenCAM(model=model, target_layers=target_layers) as cam:
+        from tqdm import tqdm
+
+        frameIdx = 0
+        for data in tqdm(dataloader_demo):
+        
+            # load data to gpu, according to type
+            for k in ['rgb', 'depth', 'lidar', 'label', 'ego_waypoint', \
+                        'target_point', 'target_point_image', 'speed']:
+                data[k] = data[k].to(device, torch.float32)
+            for k in ['semantic', 'bev']:
+                data[k] = data[k].to(device, torch.long)
+
+            targets = [PlannerTarget(data['ego_waypoint'])]
+            grayscale_cam = cam(input_data=data, targets=targets, key='rgb')
+            outputs = cam.outputs[1]
+            bs = data['rgb'].shape[0]
+
+            for i in range(bs):
+                rgb_image = data['rgb'][i].permute(1, 2, 0).detach().cpu().numpy()
+                rgb_image = rgb_image / 255.0
+                grayscale_cam_i = grayscale_cam[i]
+                cam_image = show_cam_on_image(rgb_image, grayscale_cam_i, use_rgb=True)
+
+                combined_image = np.vstack(( np.uint8(rgb_image *255), cam_image))
+                plt.imsave(f'eigen_cam_test_{frameIdx}.png', combined_image)
+                frameIdx +=1
