@@ -180,8 +180,8 @@ class BaseCAM:
         # use all conv layers for example, all Batchnorm layers,
         # or something else.
         cam_per_layer = self.compute_cam_per_layer(input_data, targets, eigen_smooth, key)
-        return self.aggregate_multi_layers(cam_per_layer)
-
+        return cam_per_layer
+    
     def get_target_width_height(self, input: Any, key : str = '') -> Tuple[int, int]:
         if(isinstance(input, dict)):
             input_data = input.get(key, None)
@@ -321,8 +321,7 @@ if __name__ == "__main__":
             for k in ['semantic', 'bev']:
                 data[k] = data[k].to(device, torch.long)
 
-            targets = [PlannerTarget(data['ego_waypoint'])]
-            grayscale_cam = cam(input_data=data, targets=targets, key='rgb')
+            grayscale_cam = cam(input_data=data, targets=[], key='rgb')
             outputs = cam.outputs[1]
             bs = data['rgb'].shape[0]
 
