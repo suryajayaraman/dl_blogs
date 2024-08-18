@@ -166,7 +166,7 @@ class BaseCAM:
             cam = weighted_activations.sum(axis=1)
         return cam
 
-    def forward(self, input_data: Any, targets: List[torch.nn.Module], eigen_smooth: bool = False, key = '') -> np.ndarray:
+    def forward(self, input_data: Any, targets: List[torch.nn.Module], eigen_smooth: bool = False, keys = []) -> np.ndarray:
 
         self.outputs = self.activations_and_grads(input_data)
 
@@ -179,7 +179,7 @@ class BaseCAM:
         # This gives you more flexibility in case you just want to
         # use all conv layers for example, all Batchnorm layers,
         # or something else.
-        cam_per_layer = self.compute_cam_per_layer(input_data, targets, eigen_smooth, key)
+        cam_per_layer = self.compute_cam_per_layer(input_data, targets, eigen_smooth, keys)
         return cam_per_layer
     
     def get_target_width_height(self, input: Any, key : str = '') -> Tuple[int, int]:
@@ -201,10 +201,9 @@ class BaseCAM:
             raise ValueError("Nan Input")
 
 
-    def compute_cam_per_layer(self, input: Any, targets: List[torch.nn.Module], eigen_smooth: bool, key : str = '') -> np.ndarray:
+    def compute_cam_per_layer(self, input: Any, targets: List[torch.nn.Module], eigen_smooth: bool, keys = []) -> np.ndarray:
         activations_list = [a.cpu().data.numpy() for a in self.activations_and_grads.activations]
         grads_list = [g.cpu().data.numpy() for g in self.activations_and_grads.gradients]
-        target_size = self.get_target_width_height(input, key)
 
         cam_per_target_layer = []
         # Loop over the saliency image from every layer
@@ -219,6 +218,7 @@ class BaseCAM:
 
             cam = self.get_cam_image(input, target_layer, targets, layer_activations, layer_grads, eigen_smooth)
             cam = np.maximum(cam, 0)
+            target_size = self.get_target_width_height(input, keys[i])
             scaled = scale_cam_image(cam, target_size)
             cam_per_target_layer.append(scaled[:, None, :])
 
