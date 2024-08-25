@@ -1,0 +1,24 @@
+route,Scenario,Directions,Comments
+route0,Wait for vehicle in front to move,Right,Police vehicle in front
+route1,Lane follow;  other vehicle merges into ego lane,Straight,
+route2,Lane follow;  Cola truck merges into ego lane,Straight,
+route3,Follow cycle in front to signal,Straight,
+route4,Lane follow till signal,Straight,Scene is different from route1 and route2
+route5,Stop and wait for other vehicles to give way,Straight; right,
+route6,Other vehicle merges into lane at start,Straight,Scene is different from route1 and route2
+route7,Two turns with motorcyle in front ending at signal,Left; right,
+route8,Follow cybertruck and wait for stop sign,Straight; right,
+route9,Vehicle leaves lane; halt at end,Straight,Small red car at front at end
+route10,Vehicle leaves lane; halt at end,Straight,Very similar to route9 but longer
+route11,Follow cycle and wait for stop sign,Straight; right,Very similar to route8
+route12,Wait for vehicle and follow,Straight; left,
+route13,Wait for stop sign and continue forward,Straight,
+route14,Wait for vehicle and go straight,Straight,front vehicle turns left
+route15,Stop sign and then wait for front vehicle,Right; left,
+route16,wait for motorcycle in front,Straight; right,
+route17,lane follow with less vehicles,Straight,Not much use
+route18,lane follow with less vehicles,Straight,Not much use
+route19,Lane follow with vehicle in front and halt at end,Left,Not much use
+route20,Lane follow with vehicle in front and halt at end,Left,Not much use
+route21,No vehicle in lane; short turns,Straight; right,Similar to route0 without any vehicle in front
+route22,No vehicle in lane; turn at end,Straight; right,
