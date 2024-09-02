@@ -10,12 +10,17 @@
 - [ST-P3 Spatio Temporal Feature Learning](https://arxiv.org/pdf/2207.07601.pdf)
 - [ReasonNet - E2E with Spatio Temporal global reasoning](https://openaccess.thecvf.com//content/CVPR2023/papers/Shao_ReasonNet_End-to-End_Driving_With_Temporal_and_Global_Reasoning_CVPR_2023_paper.pdf)
 - [MOTR: End-to-End Multiple-Object Tracking with Transformer](https://arxiv.org/pdf/2105.03247.pdf)
+- [Parking E2E](https://arxiv.org/pdf/2408.02061)
+- [E2E Parking](https://ieeexplore.ieee.org/abstract/document/10588551)
 
 ## Git repos
 - [OpenDriveLab E2E driving](https://github.com/OpenDriveLab/End-to-end-Autonomous-Driving)
 - [UniAD paper](https://github.com/OpenDriveLab/UniAD)
 - [OpenDriveLab ST-P3](https://github.com/OpenDriveLab/ST-P3)
 - [MOTR github](https://github.com/megvii-research/MOTR)
+- [Domain Adaptation in RL for Self-driving cars](https://github.com/KarlXing/LUSR?tab=readme-ov-file)
+- [E2E parking CARLA](https://github.com/qintonguav/e2e-parking-carla)
+- [Parking E2E](https://github.com/qintonguav/ParkingE2E)
 
 ## Others
 - [CARLA leaderboard](https://leaderboard.carla.org/)
