@@ -544,9 +544,56 @@ void postprocessResults(float* gpu_output, const nvinfer1::Dims& dims, int batch
     - 4-6 times using FP16 mode, 2-3 times using FP32 mode
 
 - Python vs CPP api
-    - Python
+    - Python API
+        - reuse pre and post processing transforms
+        - Make sure inference transforms are possible (on deployment Hardware)
+    - C++ API
+        - C++ API support for more platforms (64-bit windows)
+        - mulithreading possible. In python, CPython can use only 1 system thread, due to GIL
+        - recommended for cpp applications
+    - Thrust platform for GPU supported function (like sort), from NVIDIA
+- Tensorrt C++ API
+    - pre-requisite
+        - libnvinfer, libnvonnxparser, libnvparser
+        - CMake
+        - NVIDIA CUDA, CUDNN, 
+        - model in onnx format
+    - pre-processing & post-processing
+        - Allocate memory outside, resize, normalize, toTensor
+        - 
+    - TRTLogger
+        - inherits from nvinfer1::ILogger
+    - TRTDestroy
+        - Custom destructor for templated unique_ptr implementation
+    - Process
+        - parse onnx model
+        - ```cpp
+            void parseOnnxModel(const std::string& model_path, TRTUniquePtr<nvinfer1::ICudaEngine>& engine,
+                                TRTUniquePtr< nvinfer1::IExecutionContext >& context)
+            {
+                TRTUniquePtr< nvinfer1::IBuilder > builder{nvinfer1::createInferBuilder(gLogger)};
+                TRTUniquePtr< nvinfer1::INetworkDefinition > network{builder->createNetwork()};
+                TRTUniquePtr< nvonnxparser::IParser > parser{nvonnxparser::createParser(*network, gLogger)};
+                // parse ONNX
+                if (!parser->parseFromFile(model_path.c_str(), static_cast< int >(nvinfer1::ILogger::Severity::kINFO)))
+                {
+                    std::cerr << "ERROR: could not parse the model.\n";
+                    return;
+                }
+            }
 
-- Thrust platform for GPU supported function (like sort), from NVIDIA
+            // create context and generate engine
+            engine.reset(builder->buildEngineWithConfig(*network, *config));
+            context.reset(engine->createExecutionContext());
+        ```
+        - For each input, output, need to create buffers. Also, need to create names for binded outputs
+        - Preprocess input
+        - Do inference
+        - Post process output
+        - free buffers
 
-
-
+## References
+- [Tensorrt CPP API](https://learnopencv.com/how-to-run-inference-using-tensorrt-c-api/)
+- [Tensorrt Python API](https://learnopencv.com/how-to-convert-a-model-from-pytorch-to-tensorrt-and-speed-up-inference/)
+- [NVIDIA Tensorrt official documentation](https://docs.nvidia.com/deeplearning/tensorrt/latest/installing-tensorrt/overview.html#installing-pycuda)
+- [Tensorrt CPP Github implementation](https://github.com/cyrusbehr/tensorrt-cpp-api)
