@@ -35,6 +35,113 @@ TensorRT achieves high performance through various graph and precision optimizat
     *   **FP16 (Half Precision):** Using 16-bit floating-point numbers instead of 32-bit (FP32) can significantly speed up inference and reduce memory footprint with minimal accuracy loss.
     *   **INT8 (8-bit Integer Precision):** Quantizing weights and activations to 8-bit integers offers the highest performance but requires **calibration data** to mitigate accuracy reduction.
 
+### Performance Impact Analysis
+
+The relative impact of graph optimizations versus precision optimizations varies by model architecture and hardware:
+
+* **Graph Optimization Impact**
+    - According to NVIDIA's study on ResNet-50, graph optimizations alone provide 1.2x-1.5x speedup
+    - Layer fusion reduces memory bandwidth by 35-40% and kernel launch overhead by 45% [NVIDIA Developer Blog]
+    - For transformer models like BERT, graph optimizations provide 1.8x speedup by fusing attention layers [NVIDIA Deep Learning Examples]
+
+* **Precision Optimization Impact**
+    - FP16 typically provides 2-3x speedup over FP32
+    - INT8 can achieve 3-4x speedup over FP32
+    - Combined FP16/INT8 mixed precision can reach up to 6x speedup [TensorRT Documentation]
+
+Research papers show precision optimization generally contributes more to speedup:
+
+1. **Hardware Efficiency:**
+    - FP16 operations use half the memory bandwidth
+    - Modern GPUs have dedicated Tensor Cores optimized for FP16/INT8
+    - NVIDIA A100 can process 8x more FP16 operations per cycle compared to FP32
+    - Study: "Mixed Precision Training" (Micikevicius et al., 2017) shows 2x memory reduction and 2-3x throughput increase
+
+2. **Memory Bandwidth Impact:**
+    - Memory bandwidth often bottlenecks inference
+    - FP16 reduces memory traffic by 50%
+    - INT8 reduces it by 75%
+    - Paper: "In-Datacenter Performance Analysis of a Tensor Processing Unit" (Google, 2017) shows memory bandwidth dominates inference time
+
+3. **Energy Efficiency:**
+    - INT8 operations consume 4x less energy than FP32
+    - Paper: "Energy Efficiency of Neural Networks" (Han et al., 2016) demonstrates 4-5x energy savings with quantization
+
+This analysis suggests precision optimization typically contributes 60-70% of the total speedup, while graph optimizations contribute 30-40%, though exact ratios depend on the specific model architecture and hardware.
+
+### Understanding Precision Optimization in Detail
+
+Precision optimization changes how numbers are stored and computed in the GPU. To understand this:
+
+1. **How Numbers are Stored**
+   * **FP32 (32-bit):** Like storing a number with 7 decimal places (3.1415927)
+     - Uses 32 bits: 1 bit for sign, 8 bits for exponent, 23 bits for decimal part
+     - Can represent numbers from ±1.18 x 10⁻³⁸ to ±3.4 x 10³⁸
+     - Takes more memory and processing power
+   
+   * **FP16 (16-bit):** Like storing a number with 3 decimal places (3.142)
+     - Uses 16 bits: 1 bit for sign, 5 bits for exponent, 10 bits for decimal part
+     - Can represent numbers from ±6.10 x 10⁻⁵ to ±6.5 x 10⁴
+     - Takes half the memory and processing power
+   
+   * **INT8 (8-bit):** Like storing whole numbers from -128 to 127
+     - Uses 8 bits: 1 bit for sign, 7 bits for the number
+     - Requires "scaling" to represent decimals (like multiplying everything by 100)
+
+2. **Why Reduced Precision is Faster**
+   * **Memory Benefits:**
+     - Imagine moving boxes (numbers) between storage (memory) and workspace (GPU)
+     - With FP32, you need 3 trips to move 3 numbers
+     - With FP16, you can move 6 numbers in same 3 trips
+     - With INT8, you can move 12 numbers in same 3 trips
+   
+   * **Processing Benefits:**
+     - Think of GPU as a factory with multiple workers (cores)
+     - Each worker can process either:
+       * 1 FP32 calculation at a time
+       * 2 FP16 calculations at a time
+       * 4 INT8 calculations at a time
+     - More calculations done simultaneously = faster processing
+
+3. **Real-world Analogy**
+   * Imagine calculating the average height of people:
+     - FP32: Measuring to the nearest 0.1mm (32.7643 cm)
+     - FP16: Measuring to the nearest mm (32.8 cm)
+     - INT8: Measuring to the nearest cm (33 cm)
+   * For most applications, the reduced precision is still accurate enough
+
+4. **Why it Works for Deep Learning**
+   * Neural networks are naturally tolerant to some imprecision
+   * Like human brain doesn't need exact precise numbers
+   * Example: Recognizing a cat works whether whiskers are 5.123456 cm or 5.12 cm long
+
+5. **Practical Implementation**
+   * **FP16:**
+     - Simply converts FP32 numbers to FP16
+     - Usually loses very little accuracy
+     - Modern GPUs have special hardware (Tensor Cores) for FP16
+   
+   * **INT8:**
+     - More complex, requires "calibration"
+     - Like adjusting a scale before weighing:
+       1. Look at range of values in each layer
+       2. Find best way to map FP32 numbers to INT8 range (-128 to 127)
+       3. Store these mapping factors ("scales")
+       4. During inference: 
+          * Convert input → INT8
+          * Process in INT8
+          * Convert output back to FP32
+
+6. **When to Use Each Precision**
+   * **FP32:** When absolute accuracy is required (medical, financial)
+   * **FP16:** Most common choice, good balance of speed and accuracy
+   * **INT8:** When maximum speed is needed and some accuracy loss is acceptable
+
+7. **Common Misconceptions**
+   * Lower precision doesn't always mean worse results
+   * Modern networks are often trained with noise/dropout
+   * This natural robustness means they handle reduced precision well
+
 ## 3. Model Conversion Requirements: ONNX and Operator Support
 
 TensorRT's primary method for importing a trained model from a deep learning framework is the **ONNX (Open Neural Network Exchange) interchange format**.
@@ -592,8 +699,33 @@ void postprocessResults(float* gpu_output, const nvinfer1::Dims& dims, int batch
         - Post process output
         - free buffers
 
+- Torch-Tensorrt for pytorch support, deployment to python runtime
+- ONNX to tensorrt conversion is all or nothing 
+- Nsight for converting onnx model to tensorrt engine using GUI
+- Make sure all operators are supported by ONNX and Tensorrt (else, might need to implement custom Tensorrt plugin)
+
+
 ## References
 - [Tensorrt CPP API](https://learnopencv.com/how-to-run-inference-using-tensorrt-c-api/)
 - [Tensorrt Python API](https://learnopencv.com/how-to-convert-a-model-from-pytorch-to-tensorrt-and-speed-up-inference/)
 - [NVIDIA Tensorrt official documentation](https://docs.nvidia.com/deeplearning/tensorrt/latest/installing-tensorrt/overview.html#installing-pycuda)
 - [Tensorrt CPP Github implementation](https://github.com/cyrusbehr/tensorrt-cpp-api)
+- [Veoctorization MS blog post](https://learn.microsoft.com/en-gb/archive/blogs/nativeconcurrency/what-is-vectorization)
+- [Vectorization Stackoverflow post](https://stackoverflow.com/questions/1422149/what-is-vectorization)
+- [Model quantization speeds up inference](https://www.reddit.com/r/learnmachinelearning/comments/zgzh6r/whyhow_does_model_quantization_speed_up_inference/)
+- [ONNX version spec](https://github.com/onnx/onnx/tree/main?tab=readme-ov-file)
+- [Tensorrt custom plugin](https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/extending-custom-layers.html#extending-custom-layers)
+- [ONNX tensorrt supported operators](https://github.com/onnx/onnx-tensorrt/blob/main/docs/operators.md)
+- [Tensorrt plugin](https://github.com/NVIDIA/TensorRT/tree/main/plugin)
+
+
+### GPU programming resources
+- https://www.coursera.org/specializations/gpu-programming/
+- https://nvidia.github.io/cccl/cub/
+- https://github.com/NVIDIA/cutlass
+- https://developer.nvidia.com/blog/even-easier-introduction-cuda/
+- https://learn.nvidia.com/courses/course-detail?course_id=course-v1:DLI+S-AC-04+V2
+- https://www.reddit.com/r/MachineLearning/comments/w52iev/d_what_are_some_good_resources_to_learn_cuda/
+- https://www.youtube.com/playlist?list=PLPJwWVtf19Wgx_bupSDDSStSv-tOGGWRO
+- https://www.olcf.ornl.gov/cuda-training-series/
+- https://www.udemy.com/course/mastering-gpu-parallel-programming-with-cuda/
