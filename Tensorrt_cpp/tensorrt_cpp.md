@@ -1,5 +1,71 @@
 # Deploying TensorRT Engine on NVIDIA GPU: A Step-by-Step Guide
 
+## Problem statement
+- Run deep learning models efficiently at runtime on embedded platforms (only platforms with NVIDIA GPUs in this document scope)
+- Meet latency requirements for safety critical applications
+
+## Overview
+- Introduction
+- Deployment options
+- Pre-requisites for Tensorrt deployment
+- Tensorrt deployment workflow
+- Step-by-Step procedure
+
+## Introduction
+- Deep Learning models, getting larger, while there is increased focus on edge-computing for various applications
+- Performance targets b/w training and inference differ significantly
+    - Training
+        - can consume large memory, super high compute GPU platforms (multi-GPU), no strict restriction on latency
+    - Inference
+        - Limited memory, strict latency requirements, limited compute (embedded GPU), energy consumption, environment limitations (temperature)
+- Model optimization, for inference is critical, and can be classified into 4 categories
+
+![Model_optimization_techniques](images/Model_optimization_techniques.png)
+
+- [Image source](https://www.youtube.com/watch?v=f86hkOGoX54)
+- Advantages
+    - Reduced memory footprint requirements on device
+    - Faster inference time, reducing latency (=> more real-time solutions)
+    - Reduced energy consumption ( => increased battery life)
+    - Lower clock speed requirements
+
+## Deployment options
+- Two categories of classification
+    - Programming language (C++ vs Python)
+    - Model type
+        - Framework (Tensorflow (.pb) / Pytorch (.pth))
+        - ONNX (Open Neural Network Exchange)
+        - [Tensorrt](https://developer.nvidia.com/tensorrt) (NVIDIA GPUs)
+- [ONNX](https://onnx.ai/) is an open, common format built to represent machine learning models. ONNX defines a common set of operators - the building blocks of machine learning and deep learning models - and a common file format use models with a variety of frameworks, tools, runtimes, and compilers.
+
+### Torch-TensorRT
+- [Torch-TensorRT](https://github.com/pytorch/TensorRT) provides model conversion and a high-level runtime API for converting PyTorch models.
+- Torch-TensorRT conversion results in a PyTorch graph with TensorRT operations inserted into it.
+- Falls back to PyTorch implementations where TensorRT does not support a particular operator.
+- Common deployment is in python. C++ runtime using [libtorch](https://docs.pytorch.org/docs/stable/cpp_index.html) should be possible
+
+### Python vs C++ runtime
+- Python API
+    - Easier for deployment, debugging issues
+    - Reuse pre and post processing transforms
+    - Make sure inference transforms are possible (on deployment Hardware)
+- C++ API
+    - C++ API support for more platforms (64-bit windows)
+    - Mulithreading possible. In python, CPython can use only 1 system thread, due to GIL
+    - [NVIDIA Thrust](https://developer.nvidia.com/thrust) provides GPU accelerated implementations of common operations like sort, scan, transform etc
+
+### General workflow
+- Train a model using PyTorch
+- Convert the model to ONNX format
+- Use NVIDIA TensorRT (C++ runtime) for inference
+
+
+NVIDIA TensorRT is an SDK for optimizing trained deep-learning models to enable high-performance inference. TensorRT contains a deep learning inference optimizer and a runtime for execution.
+
+
+
+##
+
 This guide outlines the process of converting an ONNX model into an optimized TensorRT engine and deploying it for high-performance inference on NVIDIA GPUs using the C++ API. TensorRT is NVIDIA's framework for accelerating deep learning inference on NVIDIA hardware, offering significant performance gains.
 
 ## 1. Prerequisites
@@ -650,15 +716,7 @@ void postprocessResults(float* gpu_output, const nvinfer1::Dims& dims, int batch
     - CUDA initializes and caches some data. So, first call is always slower. Use avg time across multiple cycles
     - 4-6 times using FP16 mode, 2-3 times using FP32 mode
 
-- Python vs CPP api
-    - Python API
-        - reuse pre and post processing transforms
-        - Make sure inference transforms are possible (on deployment Hardware)
-    - C++ API
-        - C++ API support for more platforms (64-bit windows)
-        - mulithreading possible. In python, CPython can use only 1 system thread, due to GIL
-        - recommended for cpp applications
-    - Thrust platform for GPU supported function (like sort), from NVIDIA
+
 - Tensorrt C++ API
     - pre-requisite
         - libnvinfer, libnvonnxparser, libnvparser
