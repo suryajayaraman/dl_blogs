@@ -9,7 +9,9 @@
 - Deployment options
 - Pre-requisites for Tensorrt deployment
 - Tensorrt deployment workflow
-- Step-by-Step procedure
+- Appendix
+    - Tenssort optimization techniques
+- References
 
 ## Introduction
 - Deep Learning models, getting larger, while there is increased focus on edge-computing for various applications
@@ -30,13 +32,33 @@
     - Lower clock speed requirements
 
 ## Deployment options
-- Two categories of classification
+- General workflow
+    - Train a model using DL framework (PyTorch / TF)
+    - Convert the model to desired format
+    - Use deployment option for inference
+
+![inference_options](images/inference_options.png)
+
+- [Image source](https://docs.nvidia.com/deeplearning/tensorrt/latest/getting-started/quick-start-guide.html)
+- Two categories for classification
     - Programming language (C++ vs Python)
     - Model type
         - Framework (Tensorflow (.pb) / Pytorch (.pth))
         - ONNX (Open Neural Network Exchange)
         - [Tensorrt](https://developer.nvidia.com/tensorrt) (NVIDIA GPUs)
-- [ONNX](https://onnx.ai/) is an open, common format built to represent machine learning models. ONNX defines a common set of operators - the building blocks of machine learning and deep learning models - and a common file format use models with a variety of frameworks, tools, runtimes, and compilers.
+
+### Python vs C++ runtime
+- Python API
+    - Easier for deployment, debugging issues
+    - Reuse pre and post processing transforms
+    - More performance overhead
+    - Make sure inference transforms are possible (on deployment Hardware)
+- C++ API
+    - C++ API support for more platforms (64-bit windows)
+    - Mulithreading possible. In python, CPython can use only 1 system thread, due to GIL
+    - Least overhead possible
+    - [NVIDIA Thrust](https://developer.nvidia.com/thrust) provides GPU accelerated implementations of common operations like sort, scan, transform etc
+    - Fine-grained control over the execution of model using a C++ interface, including memory allocation, kernel execution, and copies to and from the GPU explicit
 
 ### Torch-TensorRT
 - [Torch-TensorRT](https://github.com/pytorch/TensorRT) provides model conversion and a high-level runtime API for converting PyTorch models.
@@ -44,209 +66,117 @@
 - Falls back to PyTorch implementations where TensorRT does not support a particular operator.
 - Common deployment is in python. C++ runtime using [libtorch](https://docs.pytorch.org/docs/stable/cpp_index.html) should be possible
 
-### Python vs C++ runtime
-- Python API
-    - Easier for deployment, debugging issues
-    - Reuse pre and post processing transforms
-    - Make sure inference transforms are possible (on deployment Hardware)
-- C++ API
-    - C++ API support for more platforms (64-bit windows)
-    - Mulithreading possible. In python, CPython can use only 1 system thread, due to GIL
-    - [NVIDIA Thrust](https://developer.nvidia.com/thrust) provides GPU accelerated implementations of common operations like sort, scan, transform etc
-
-### General workflow
-- Train a model using PyTorch
-- Convert the model to ONNX format
-- Use NVIDIA TensorRT (C++ runtime) for inference
+### ONNX
+- [ONNX](https://onnx.ai/) is an open, common format built to represent machine learning models. ONNX defines a common set of operators - the building blocks of machine learning and deep learning models - and a common file format use models with a variety of frameworks, tools, runtimes, and compilers.
 
 
-NVIDIA TensorRT is an SDK for optimizing trained deep-learning models to enable high-performance inference. TensorRT contains a deep learning inference optimizer and a runtime for execution.
+### Tensorrt
+- NVIDIA TensorRT is an SDK for optimizing trained deep-learning models to enable high-performance inference. TensorRT contains a deep learning inference optimizer and a runtime for execution.
+- NVIDIA Tensorrt consists of two components
+    - A series of parsers and integrations to convert your model to an optimized engine
+    - An series of TensorRT runtime APIs with several associated tools for deployment.
+
+![inference_workflow](images/inference_workflow.png)
+
+- [Image source](https://www.youtube.com/watch?v=f86hkOGoX54)
+
+## Prerequisites
+- Assumtion: model is converted to ONNX format, to be deployed in an C++ application
+
+### Hardware and Software Requirements
+- **NVIDIA graphics card** with compute capability >=5.0
+- **Ubuntu 20.04 or 22.04** OS
+- **NVIDIA CUDA Toolkit** > 11.0 (12.0+ recommended)
+- **cuDNN library** (version 8 or later, but less than 9 for OpenCV GPU compatibility)
+- **CMake** >= 3.10
+*   **OpenCV with CUDA support** (version 4.8+ recommended) for image preprocessing.
+
+### Dependencies
+- Tensorrt implementation (`libnvinfer`, `libnvonnxparser`, and `libnvparser` libraries), can be linked externally
+- No official `find_package()` for Tenssort. Need custom implementation
+
+### Model requirements
+- Non-native Pre-processing and post-processing operations implemented in C++
+- **Operator Support Matrix and Compatibility**
+    - The ONNX parser aims for backward compatibility (up to opset 9). It is recommended to export models to the **latest available ONNX opset** for TensorRT deployment.
+    - It's crucial to check the **ONNX-TensorRT operator support matrix** to ensure all operators in your ONNX model are supported by your TensorRT version.
+    - If an ONNX model contains unsupported operators or has compatibility issues, the parser might fail.
+- Non-native operations implemented as Tensorrt plugins
+
+- **NOTE**
+    - Engine file needs to be generated on platform with same SM as deployment hardware (A7Z1 contains embedded A2000 GPU, same as A10 series, g5dn instance in AWS)
 
 
+    - [Tenssort support Matrix](https://docs.nvidia.com/deeplearning/tensorrt/latest/getting-started/support-matrix.html)
 
-##
 
-This guide outlines the process of converting an ONNX model into an optimized TensorRT engine and deploying it for high-performance inference on NVIDIA GPUs using the C++ API. TensorRT is NVIDIA's framework for accelerating deep learning inference on NVIDIA hardware, offering significant performance gains.
+## Tenssort deployment workflow
+- Engine file generation
+- Logger instantiation
+- Preprocessing
+- Post processing
 
-## 1. Prerequisites
+Deserialize the TensorRT engine from a file. The file contents are read into a buffer and deserialized in memory.
 
-Before diving into the C++ API, it's essential to set up your environment and understand the core components.
+A TensorRT execution context encapsulates execution state such as persistent device memory for holding intermediate activation tensors during inference.
 
-*   **Hardware and Software Requirements**
-    *   An **NVIDIA graphics card** with a compute capability of 5.0 or newer (Maxwell architecture or later) is required. As of TensorRT 8.6, Kepler (SM 3.x) and Maxwell (SM 5.x) devices are no longer supported, and Pascal (SM 6.x) devices were deprecated.
-    *   **Ubuntu 20.04 or 22.04** is a common operating system for TensorRT development.
-    *   **NVIDIA CUDA Toolkit** (version 11.0 or later, 12.0+ recommended) and **cuDNN library** (version 8 or later, but less than 9 for OpenCV GPU compatibility) are essential.
-    *   **CMake** (version 3.10 or later) is needed for building the application.
-    *   **OpenCV with CUDA support** (version 4.8+ recommended) is often used for image preprocessing.
+Inference execution is kicked off using the context’s executeV2 or enqueueV3 methods. After the execution, we copy the results to a host buffer and release all device memory allocations.
 
-*   **Dependencies and Build Environment Setup**
-    *   TensorRT requires linking against three main libraries: `libnvinfer`, `libnvonnxparser`, and `libnvparser`.
-    *   Setting up the CMake file to correctly locate and link these dependencies can be challenging, as TensorRT does not provide its own `find_package` script. You will need to explicitly specify these libraries along with CUDA and OpenCV.
+In preparation for inference, CUDA device memory is allocated for all inputs and outputs, image data is processed and copied into input memory, and a list of engine bindings is generated.
 
-*   **Essential TensorRT Libraries**
-    The C++ API is primarily accessed through the `NvInfer.h` header and resides in the `nvinfer1` namespace. Interface classes in the API typically begin with an `I` prefix, such as `ILogger` and `IBuilder`.
+Tenssorrt provides interface classes for most
 
-## 2. Understanding TensorRT Speedup Mechanisms
+### Engine file generation
+- 
 
-TensorRT achieves high performance through various graph and precision optimizations, which can result in 2-6 times faster inference compared to standard frameworks.
+sing trtexec
 
-*   **Graph Optimizations (Layer Fusion, etc.)**
-    TensorRT performs graph optimizations during the build phase to create an optimized engine. This includes techniques like:
-    *   **Layer Fusion:** Combining multiple layers (e.g., convolution, bias, activation) into a single kernel to reduce memory bandwidth and kernel launch overhead.
-    *   **Tensor Memory Optimization:** Allocating and reusing GPU memory for tensors more efficiently.
-    *   **Kernel Auto-tuning:** Selecting the fastest algorithm (tactics) for each layer based on the specific GPU and input data.
+Using the TensorRT API
 
-*   **Precision Optimizations (FP16, INT8)**
-    TensorRT supports different precision modes to further accelerate inference:
-    *   **FP16 (Half Precision):** Using 16-bit floating-point numbers instead of 32-bit (FP32) can significantly speed up inference and reduce memory footprint with minimal accuracy loss.
-    *   **INT8 (8-bit Integer Precision):** Quantizing weights and activations to 8-bit integers offers the highest performance but requires **calibration data** to mitigate accuracy reduction.
+Using the Nsight Deep Learning Designer GUI
 
-### Performance Impact Analysis
+In this section, we will focus on using trtexec. To convert one of the preceding ONNX models to a TensorRT engine using trtexec, we can run this conversion as follows:
 
-The relative impact of graph optimizations versus precision optimizations varies by model architecture and hardware:
+```
+trtexec --onnx=resnet50_pytorch.onnx --saveEngine=resnet_engine_pytorch.trt
+```
 
-* **Graph Optimization Impact**
-    - According to NVIDIA's study on ResNet-50, graph optimizations alone provide 1.2x-1.5x speedup
-    - Layer fusion reduces memory bandwidth by 35-40% and kernel launch overhead by 45% [NVIDIA Developer Blog]
-    - For transformer models like BERT, graph optimizations provide 1.8x speedup by fusing attention layers [NVIDIA Deep Learning Examples]
+- **Engine is specific to hardware, software** (Tensorrt version, batch size, precision)
 
-* **Precision Optimization Impact**
-    - FP16 typically provides 2-3x speedup over FP32
-    - INT8 can achieve 3-4x speedup over FP32
-    - Combined FP16/INT8 mixed precision can reach up to 6x speedup [TensorRT Documentation]
 
-Research papers show precision optimization generally contributes more to speedup:
+### Logger Instantiation
+```cpp
 
-1. **Hardware Efficiency:**
-    - FP16 operations use half the memory bandwidth
-    - Modern GPUs have dedicated Tensor Cores optimized for FP16/INT8
-    - NVIDIA A100 can process 8x more FP16 operations per cycle compared to FP32
-    - Study: "Mixed Precision Training" (Micikevicius et al., 2017) shows 2x memory reduction and 2-3x throughput increase
-
-2. **Memory Bandwidth Impact:**
-    - Memory bandwidth often bottlenecks inference
-    - FP16 reduces memory traffic by 50%
-    - INT8 reduces it by 75%
-    - Paper: "In-Datacenter Performance Analysis of a Tensor Processing Unit" (Google, 2017) shows memory bandwidth dominates inference time
-
-3. **Energy Efficiency:**
-    - INT8 operations consume 4x less energy than FP32
-    - Paper: "Energy Efficiency of Neural Networks" (Han et al., 2016) demonstrates 4-5x energy savings with quantization
-
-This analysis suggests precision optimization typically contributes 60-70% of the total speedup, while graph optimizations contribute 30-40%, though exact ratios depend on the specific model architecture and hardware.
-
-### Understanding Precision Optimization in Detail
-
-Precision optimization changes how numbers are stored and computed in the GPU. To understand this:
-
-1. **How Numbers are Stored**
-   * **FP32 (32-bit):** Like storing a number with 7 decimal places (3.1415927)
-     - Uses 32 bits: 1 bit for sign, 8 bits for exponent, 23 bits for decimal part
-     - Can represent numbers from ±1.18 x 10⁻³⁸ to ±3.4 x 10³⁸
-     - Takes more memory and processing power
-   
-   * **FP16 (16-bit):** Like storing a number with 3 decimal places (3.142)
-     - Uses 16 bits: 1 bit for sign, 5 bits for exponent, 10 bits for decimal part
-     - Can represent numbers from ±6.10 x 10⁻⁵ to ±6.5 x 10⁴
-     - Takes half the memory and processing power
-   
-   * **INT8 (8-bit):** Like storing whole numbers from -128 to 127
-     - Uses 8 bits: 1 bit for sign, 7 bits for the number
-     - Requires "scaling" to represent decimals (like multiplying everything by 100)
-
-2. **Why Reduced Precision is Faster**
-   * **Memory Benefits:**
-     - Imagine moving boxes (numbers) between storage (memory) and workspace (GPU)
-     - With FP32, you need 3 trips to move 3 numbers
-     - With FP16, you can move 6 numbers in same 3 trips
-     - With INT8, you can move 12 numbers in same 3 trips
-   
-   * **Processing Benefits:**
-     - Think of GPU as a factory with multiple workers (cores)
-     - Each worker can process either:
-       * 1 FP32 calculation at a time
-       * 2 FP16 calculations at a time
-       * 4 INT8 calculations at a time
-     - More calculations done simultaneously = faster processing
-
-3. **Real-world Analogy**
-   * Imagine calculating the average height of people:
-     - FP32: Measuring to the nearest 0.1mm (32.7643 cm)
-     - FP16: Measuring to the nearest mm (32.8 cm)
-     - INT8: Measuring to the nearest cm (33 cm)
-   * For most applications, the reduced precision is still accurate enough
-
-4. **Why it Works for Deep Learning**
-   * Neural networks are naturally tolerant to some imprecision
-   * Like human brain doesn't need exact precise numbers
-   * Example: Recognizing a cat works whether whiskers are 5.123456 cm or 5.12 cm long
-
-5. **Practical Implementation**
-   * **FP16:**
-     - Simply converts FP32 numbers to FP16
-     - Usually loses very little accuracy
-     - Modern GPUs have special hardware (Tensor Cores) for FP16
-   
-   * **INT8:**
-     - More complex, requires "calibration"
-     - Like adjusting a scale before weighing:
-       1. Look at range of values in each layer
-       2. Find best way to map FP32 numbers to INT8 range (-128 to 127)
-       3. Store these mapping factors ("scales")
-       4. During inference: 
-          * Convert input → INT8
-          * Process in INT8
-          * Convert output back to FP32
-
-6. **When to Use Each Precision**
-   * **FP32:** When absolute accuracy is required (medical, financial)
-   * **FP16:** Most common choice, good balance of speed and accuracy
-   * **INT8:** When maximum speed is needed and some accuracy loss is acceptable
-
-7. **Common Misconceptions**
-   * Lower precision doesn't always mean worse results
-   * Modern networks are often trained with noise/dropout
-   * This natural robustness means they handle reduced precision well
-
-## 3. Model Conversion Requirements: ONNX and Operator Support
-
-TensorRT's primary method for importing a trained model from a deep learning framework is the **ONNX (Open Neural Network Exchange) interchange format**.
-
-*   **ONNX as the Primary Interchange Format**
-    *   Models trained in frameworks like PyTorch or TensorFlow are typically exported to ONNX format first.
-    *   TensorRT ships with an ONNX parser library (`nvonnxparser`) to assist in importing these models.
-
-*   **Operator Support Matrix and Compatibility**
-    *   The ONNX parser aims for backward compatibility (up to opset 9). It is recommended to export models to the **latest available ONNX opset** for TensorRT deployment.
-    *   It's crucial to check the **ONNX-TensorRT operator support matrix** to ensure all operators in your ONNX model are supported by your TensorRT version.
-    *   If an ONNX model contains unsupported operators or has compatibility issues, the parser might fail.
-
-*   **Troubleshooting Conversion Issues**
-    *   **Constant Folding:** Running constant folding using Polygraphy on the ONNX model before parsing can often resolve TensorRT conversion issues.
-    *   **Model Modification:** In some cases, you might need to modify the ONNX model, for example, by replacing subgraphs with custom plugins or reimplementing unsupported operations with supported ones. Tools like ONNX-GraphSurgeon can assist with this.
-
-## 4. Step-by-Step Process: From ONNX Model to TensorRT Engine Deployment
-
-The TensorRT workflow involves distinct "offline" (build/optimization) and "online" (inference) phases.
-
-### Phase 1: The Build/Optimization Phase (Offline)
-
-This phase converts your ONNX model into an optimized TensorRT engine file, typically an `.plan` file. This process is performed once and can be time-consuming.
-
-1.  **Instantiate a Logger**
-    TensorRT's builder and runtime require an `ILogger` instance to capture errors, warnings, and other information.
-    ```cpp
-    class Logger : public nvinfer1::ILogger {
-    public:
-        void log(Severity severity, const char* msg) noexcept override {
-            // Suppress info-level messages, print warnings and errors
-            if (severity <= Severity::kWARNING) {
-                std::cout << msg << std::endl;
-            }
+//// LOGGER class
+class Logger : public nvinfer1::ILogger {
+public:
+    void log(Severity severity, const char* msg) noexcept override {
+        // Suppress info-level messages, print warnings and errors
+        if (severity <= Severity::kWARNING) {
+            std::cout << msg << std::endl;
         }
-    } logger;
-    ```
-    *Using smart pointers for TensorRT interfaces is recommended for proper object lifetime management*.
+    }
+} logger;
+
+//////////////////////////////////////////////////////
+
+// Destroy TensorRT objects if something goes wrong
+struct TRTDestroy
+{
+    template< class T >
+    void operator()(T* obj) const
+    {
+        if (obj)
+        {
+            obj->destroy();
+        }
+    }
+};
+ 
+template< class T >
+using TRTUniquePtr = std::unique_ptr< T, TRTDestroy >;
+```
+
 
 2.  **Create Builder and Network Definition**
     *   Instantiate an `IBuilder` object using the logger.
@@ -761,6 +691,135 @@ void postprocessResults(float* gpu_output, const nvinfer1::Dims& dims, int batch
 - ONNX to tensorrt conversion is all or nothing 
 - Nsight for converting onnx model to tensorrt engine using GUI
 - Make sure all operators are supported by ONNX and Tensorrt (else, might need to implement custom Tensorrt plugin)
+
+
+## 2. Understanding TensorRT Speedup Mechanisms
+
+TensorRT achieves high performance through various graph and precision optimizations, which can result in 2-6 times faster inference compared to standard frameworks.
+
+*   **Graph Optimizations (Layer Fusion, etc.)**
+    TensorRT performs graph optimizations during the build phase to create an optimized engine. This includes techniques like:
+    *   **Layer Fusion:** Combining multiple layers (e.g., convolution, bias, activation) into a single kernel to reduce memory bandwidth and kernel launch overhead.
+    *   **Tensor Memory Optimization:** Allocating and reusing GPU memory for tensors more efficiently.
+    *   **Kernel Auto-tuning:** Selecting the fastest algorithm (tactics) for each layer based on the specific GPU and input data.
+
+*   **Precision Optimizations (FP16, INT8)**
+    TensorRT supports different precision modes to further accelerate inference:
+    *   **FP16 (Half Precision):** Using 16-bit floating-point numbers instead of 32-bit (FP32) can significantly speed up inference and reduce memory footprint with minimal accuracy loss.
+    *   **INT8 (8-bit Integer Precision):** Quantizing weights and activations to 8-bit integers offers the highest performance but requires **calibration data** to mitigate accuracy reduction.
+
+### Performance Impact Analysis
+
+The relative impact of graph optimizations versus precision optimizations varies by model architecture and hardware:
+
+* **Graph Optimization Impact**
+    - According to NVIDIA's study on ResNet-50, graph optimizations alone provide 1.2x-1.5x speedup
+    - Layer fusion reduces memory bandwidth by 35-40% and kernel launch overhead by 45% [NVIDIA Developer Blog]
+    - For transformer models like BERT, graph optimizations provide 1.8x speedup by fusing attention layers [NVIDIA Deep Learning Examples]
+
+* **Precision Optimization Impact**
+    - FP16 typically provides 2-3x speedup over FP32
+    - INT8 can achieve 3-4x speedup over FP32
+    - Combined FP16/INT8 mixed precision can reach up to 6x speedup [TensorRT Documentation]
+
+Research papers show precision optimization generally contributes more to speedup:
+
+1. **Hardware Efficiency:**
+    - FP16 operations use half the memory bandwidth
+    - Modern GPUs have dedicated Tensor Cores optimized for FP16/INT8
+    - NVIDIA A100 can process 8x more FP16 operations per cycle compared to FP32
+    - Study: "Mixed Precision Training" (Micikevicius et al., 2017) shows 2x memory reduction and 2-3x throughput increase
+
+2. **Memory Bandwidth Impact:**
+    - Memory bandwidth often bottlenecks inference
+    - FP16 reduces memory traffic by 50%
+    - INT8 reduces it by 75%
+    - Paper: "In-Datacenter Performance Analysis of a Tensor Processing Unit" (Google, 2017) shows memory bandwidth dominates inference time
+
+3. **Energy Efficiency:**
+    - INT8 operations consume 4x less energy than FP32
+    - Paper: "Energy Efficiency of Neural Networks" (Han et al., 2016) demonstrates 4-5x energy savings with quantization
+
+This analysis suggests precision optimization typically contributes 60-70% of the total speedup, while graph optimizations contribute 30-40%, though exact ratios depend on the specific model architecture and hardware.
+
+### Understanding Precision Optimization in Detail
+
+Precision optimization changes how numbers are stored and computed in the GPU. To understand this:
+
+1. **How Numbers are Stored**
+   * **FP32 (32-bit):** Like storing a number with 7 decimal places (3.1415927)
+     - Uses 32 bits: 1 bit for sign, 8 bits for exponent, 23 bits for decimal part
+     - Can represent numbers from ±1.18 x 10⁻³⁸ to ±3.4 x 10³⁸
+     - Takes more memory and processing power
+   
+   * **FP16 (16-bit):** Like storing a number with 3 decimal places (3.142)
+     - Uses 16 bits: 1 bit for sign, 5 bits for exponent, 10 bits for decimal part
+     - Can represent numbers from ±6.10 x 10⁻⁵ to ±6.5 x 10⁴
+     - Takes half the memory and processing power
+   
+   * **INT8 (8-bit):** Like storing whole numbers from -128 to 127
+     - Uses 8 bits: 1 bit for sign, 7 bits for the number
+     - Requires "scaling" to represent decimals (like multiplying everything by 100)
+
+2. **Why Reduced Precision is Faster**
+   * **Memory Benefits:**
+     - Imagine moving boxes (numbers) between storage (memory) and workspace (GPU)
+     - With FP32, you need 3 trips to move 3 numbers
+     - With FP16, you can move 6 numbers in same 3 trips
+     - With INT8, you can move 12 numbers in same 3 trips
+   
+   * **Processing Benefits:**
+     - Think of GPU as a factory with multiple workers (cores)
+     - Each worker can process either:
+       * 1 FP32 calculation at a time
+       * 2 FP16 calculations at a time
+       * 4 INT8 calculations at a time
+     - More calculations done simultaneously = faster processing
+
+3. **Real-world Analogy**
+   * Imagine calculating the average height of people:
+     - FP32: Measuring to the nearest 0.1mm (32.7643 cm)
+     - FP16: Measuring to the nearest mm (32.8 cm)
+     - INT8: Measuring to the nearest cm (33 cm)
+   * For most applications, the reduced precision is still accurate enough
+
+4. **Why it Works for Deep Learning**
+   * Neural networks are naturally tolerant to some imprecision
+   * Like human brain doesn't need exact precise numbers
+   * Example: Recognizing a cat works whether whiskers are 5.123456 cm or 5.12 cm long
+
+5. **Practical Implementation**
+   * **FP16:**
+     - Simply converts FP32 numbers to FP16
+     - Usually loses very little accuracy
+     - Modern GPUs have special hardware (Tensor Cores) for FP16
+   
+   * **INT8:**
+     - More complex, requires "calibration"
+     - Like adjusting a scale before weighing:
+       1. Look at range of values in each layer
+       2. Find best way to map FP32 numbers to INT8 range (-128 to 127)
+       3. Store these mapping factors ("scales")
+       4. During inference: 
+          * Convert input → INT8
+          * Process in INT8
+          * Convert output back to FP32
+
+6. **When to Use Each Precision**
+   * **FP32:** When absolute accuracy is required (medical, financial)
+   * **FP16:** Most common choice, good balance of speed and accuracy
+   * **INT8:** When maximum speed is needed and some accuracy loss is acceptable
+
+7. **Common Misconceptions**
+   * Lower precision doesn't always mean worse results
+   * Modern networks are often trained with noise/dropout
+   * This natural robustness means they handle reduced precision well
+
+## Maybe used
+*   **Troubleshooting Conversion Issues**
+    *   **Constant Folding:** Running constant folding using Polygraphy on the ONNX model before parsing can often resolve TensorRT conversion issues.
+    *   **Model Modification:** In some cases, you might need to modify the ONNX model, for example, by replacing subgraphs with custom plugins or reimplementing unsupported operations with supported ones. Tools like ONNX-GraphSurgeon can assist with this.
+
 
 
 ## References
