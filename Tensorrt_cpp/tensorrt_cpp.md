@@ -96,55 +96,46 @@
 - No official `find_package()` for Tenssort. Need custom implementation
 
 ### Model requirements
-- Non-native Pre-processing and post-processing operations implemented in C++
-- **Operator Support Matrix and Compatibility**
-    - The ONNX parser aims for backward compatibility (up to opset 9). It is recommended to export models to the **latest available ONNX opset** for TensorRT deployment.
-    - It's crucial to check the **ONNX-TensorRT operator support matrix** to ensure all operators in your ONNX model are supported by your TensorRT version.
-    - If an ONNX model contains unsupported operators or has compatibility issues, the parser might fail.
+- Pre-processing and post-processing operations implemented in C++
+- ONNX parser to be compatible with ONNX opset ()
+    - If an ONNX model contains unsupported operators or has compatibility issues, the parser might fail (parser is backward compatible to specific ONNX opset)
 - Non-native operations implemented as Tensorrt plugins
-
 - **NOTE**
     - Engine file needs to be generated on platform with same SM as deployment hardware (A7Z1 contains embedded A2000 GPU, same as A10 series, g5dn instance in AWS)
-
-
     - [Tenssort support Matrix](https://docs.nvidia.com/deeplearning/tensorrt/latest/getting-started/support-matrix.html)
 
 
 ## Tenssort deployment workflow
-- Engine file generation
-- Logger instantiation
+- Engine file generation (offline process)
+- Logger and Builder Instantiation
+- Network definition
+- Deserializing plan
 - Preprocessing
 - Post processing
 
-Deserialize the TensorRT engine from a file. The file contents are read into a buffer and deserialized in memory.
-
-A TensorRT execution context encapsulates execution state such as persistent device memory for holding intermediate activation tensors during inference.
-
-Inference execution is kicked off using the context’s executeV2 or enqueueV3 methods. After the execution, we copy the results to a host buffer and release all device memory allocations.
-
-In preparation for inference, CUDA device memory is allocated for all inputs and outputs, image data is processed and copied into input memory, and a list of engine bindings is generated.
-
 Tenssorrt provides interface classes for most
 
-### Engine file generation
-- 
+### Engine file generation (offline process)
+- Engine (.engine / .plan) is serialized version of the inference graph
+- It can be generated using 3 ways
+    - trtexec
+    - TensorRT API
+    - Nsight Deep Learning Designer GUI
 
-sing trtexec
-
-Using the TensorRT API
-
-Using the Nsight Deep Learning Designer GUI
-
-In this section, we will focus on using trtexec. To convert one of the preceding ONNX models to a TensorRT engine using trtexec, we can run this conversion as follows:
-
+```bash
+trtexec --onnx=<onnx model> --saveEngine=<output model>
 ```
-trtexec --onnx=resnet50_pytorch.onnx --saveEngine=resnet_engine_pytorch.trt
-```
+- Options during plan generation
+    - Precision (FP16 / FP8, INT8)
+    - Maximum memory to be used during conversion
+    - hardware comptability mode (ampere -> ampere+)
+    - Version compatibility (Tensorrt 8.6 -> Tensorrt 9)
 
 - **Engine is specific to hardware, software** (Tensorrt version, batch size, precision)
+- **NOTE** For more fine-grained control, use Tensorrt API
 
-
-### Logger Instantiation
+### Logger and Builder Instantiation
+- `ILogger` implementation is required for `IBuilder` implementation
 ```cpp
 
 //// LOGGER class
@@ -158,36 +149,41 @@ public:
     }
 } logger;
 
-//////////////////////////////////////////////////////
-
-// Destroy TensorRT objects if something goes wrong
-struct TRTDestroy
-{
-    template< class T >
-    void operator()(T* obj) const
-    {
-        if (obj)
-        {
-            obj->destroy();
-        }
-    }
-};
- 
-template< class T >
-using TRTUniquePtr = std::unique_ptr< T, TRTDestroy >;
+IBuilder* builder = createInferBuilder(logger);
 ```
 
 
-2.  **Create Builder and Network Definition**
-    *   Instantiate an `IBuilder` object using the logger.
-    *   Create an `INetworkDefinition` instance using the builder, optionally with `NetworkDefinitionCreationFlag::kSTRONGLY_TYPED`.
-    ```cpp
-    // Using smart pointers
-    auto builder = SampleUniquePtr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(sample::gLogger.getTRTLogger()));
-    auto network = SampleUniquePtr<nvinfer1::INetworkDefinition>(builder->createNetworkV2(0 /* flags */));
-    // For non-strongly typed networks, 0 is often used for flags.
-    // Use NetworkDefinitionCreationFlag::kSTRONGLY_TYPED for strongly typed.
-    ```
+### Network Definition
+- Create an `INetworkDefinition` instance using the builder, optionally with `NetworkDefinitionCreationFlag::kSTRONGLY_TYPED`.
+```cpp
+INetworkDefinition* network = builder->createNetworkV2(NetworkDefinitionCreationFlag::kSTRONGLY_TYPED);
+```
+
+### Deserializing plan
+Deserialize the TensorRT engine from a file. The file contents are read into a buffer and deserialized in memory.
+
+```cpp
+IRuntime* runtime = createInferRuntime(logger);
+std::vector<char> modelData = readModelFromFile("model.plan");
+ICudaEngine* engine = runtime->deserializeCudaEngine(modelData.data(), modelData.size());
+```
+
+### Preprocessing
+
+### Performing inference
+- The engine holds the optimized model, but you must manage additional states for intermediate activations to perform inference. 
+
+```cpp
+IExecutionContext *context = engine->createExecutionContext();
+```
+
+
+A TensorRT execution context encapsulates execution state such as persistent device memory for holding intermediate activation tensors during inference.
+
+Inference execution is kicked off using the context’s executeV2 or enqueueV3 methods. After the execution, we copy the results to a host buffer and release all device memory allocations.
+
+In preparation for inference, CUDA device memory is allocated for all inputs and outputs, image data is processed and copied into input memory, and a list of engine bindings is generated.
+
 
 3.  **Import ONNX Model**
     *   Create an `nvonnxparser::IParser` instance, passing the network definition and logger.
@@ -819,6 +815,9 @@ Precision optimization changes how numbers are stored and computed in the GPU. T
 *   **Troubleshooting Conversion Issues**
     *   **Constant Folding:** Running constant folding using Polygraphy on the ONNX model before parsing can often resolve TensorRT conversion issues.
     *   **Model Modification:** In some cases, you might need to modify the ONNX model, for example, by replacing subgraphs with custom plugins or reimplementing unsupported operations with supported ones. Tools like ONNX-GraphSurgeon can assist with this.
+
+- CUDA streams, asynchronous stream execution
+- Dynamic batch shapes
 
 
 
