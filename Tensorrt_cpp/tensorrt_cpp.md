@@ -148,6 +148,7 @@ public:
 
 IBuilder* builder = createInferBuilder(logger);
 ```
+- Logger implementation must be thread-safe
 
 ### Deserializing plan
 - Deserialize the TensorRT engine from a file. The file contents are read into a buffer and deserialized in memory.
@@ -382,6 +383,47 @@ Precision optimization changes how numbers are stored and computed in the GPU. T
 *   **Troubleshooting Conversion Issues**
     *   **Constant Folding:** Running constant folding using Polygraphy on the ONNX model before parsing can often resolve TensorRT conversion issues.
     *   **Model Modification:** In some cases, you might need to modify the ONNX model, for example, by replacing subgraphs with custom plugins or reimplementing unsupported operations with supported ones. Tools like ONNX-GraphSurgeon can assist with this.
+
+### Plugins
+- TensorRT has a Plugin interface that allows applications to implement operations that TensorRT does not support natively.
+- When converting models from ONNX to TensorRT, ONNX parser can find plugins created and registered with TensorRT’s `PluginRegistry`
+
+### Strong Typing vs Weak Typing
+- For strongly typed networks, TensorRT’s optimizer will statically infer intermediate tensor types based on the network input types and the operator specifications, and adhere strictly to those types.
+- For weakly typed networks, optimizer might substitute for different precision if it increases performance
+
+### Dynamic shapes
+- Dynamic Shapes is the ability to defer specifying some or all tensor dimensions until runtime. Dynamic shapes can be used through both the C++ and Python interfaces.
+- For using dynamic shapes
+    - Specify each runtime dimension of an input tensor by using -1 as a placeholder for the dimension.
+    - Specify an optimization profiles at build time that specify the permitted range of dimensions for inputs with runtime dimensions and the dimensions, which will be optimized
+
+```cpp
+// build time (unspecified width, height)
+networkDefinition.addInput("foo", DataType::kFLOAT, Dims3(3, -1, -1))
+
+// runtime
+context.setInputShape("foo", Dims{3, {3, 150, 250}})
+
+// engine.getTensorShape("foo") returns (3, -1, -1)
+// context.getTensorShape("foo") returns (3, 150, 250)
+```
+
+
+### Extending TensorRT with Custom Layers
+- TensorRT implementations can be extended by implementing custom layers, often called plugins.
+- Used when existing layers don't support model usecase. [Existing open source plugins](https://github.com/NVIDIA/TensorRT/tree/main/plugin#tensorrt-plugins)
+- Custom plugins must be registered using `initLibNvInferPlugins` (from `libnvinfer_plugin.so`)
+
+
+### Polygraphy
+- Toolkit designed to assist in running and debugging deep learning models in TensorRT and other frameworks. 
+- Includes a Python API and a command-line interface (CLI) built using this API
+- It can
+     - Convert models to formats like TensorRT engines with post-training quantization (API, CLI).
+    - Run inference among multiple backends, like TensorRT and ONNX-Runtime, and compare results (API, CLI).
+     - Isolate faulty tactics in TensorRT (CLI)
+
 
 
 ## References

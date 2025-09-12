@@ -1,0 +1,65 @@
+lidar voxelization
+- init (allocate memory for all member variables)
+- manual GPU operations
+- create voxels
+- generate base features (create voxel wise features - 4)
+- generate features (xc, yc, zc, xp, yp, other 5 features)
+
+lidar backbone
+- init
+	- runtime_ = std::shared_ptr<nvinfer1::IRuntime>(nvinfer1::createInferRuntime(gLogger_), destroy_pointer<nvinfer1::IRuntime>);
+	- engine_ = std::shared_ptr<nvinfer1::ICudaEngine>(runtime_->deserializeCudaEngine(pdata, size, nullptr),
+                                                     destroy_pointer<nvinfer1::ICudaEngine>);
+	- context_ = std::shared_ptr<nvinfer1::IExecutionContext>(engine_->createExecutionContext(),
+                                                            destroy_pointer<nvinfer1::IExecutionContext>);
+	- cudaMalloc()
+	
+- actual inference
+	- use cudaStream		
+	- return this->context_->context_->enqueueV2((void **)bindings.data(), (cudaStream_t)stream, (cudaEvent_t *)input_consum_event);
+
+post process
+- init
+	- allocate memory for member variables
+- inference
+	- among best scored bounding boxes, use nms to find best non overlapping bounding boxes
+
+
+When to Write Custom TensorRT Plugins: You should write custom TensorRT plugins when:
+a) Implementation of Novel Operations:
+
+When you have a custom/novel operation that isn't available in standard TensorRT
+When the operation cannot be represented using existing TensorRT layers
+b) Performance Optimization:
+
+When the default implementation of an operation is not optimal for your use case
+When you need to fuse multiple operations into a single kernel for better performance
+c) Specific Cases:
+
+Custom pre/post-processing operations
+Domain-specific operations (like this pillar scatter for 3D point clouds)
+Operations that require specific memory layout or data handling
+When you need to maintain the exact numerical precision of the original model
+d) Common Examples:
+
+Custom activation functions
+Special normalization techniques
+Geometric transformations
+Custom pooling operations
+Data reorganization operations (like this scatter operation)
+Things to Consider Before Writing a Plugin:
+Can the operation be implemented using existing TensorRT layers?
+Is the performance gain worth the development effort?
+Will the plugin be maintainable across different TensorRT versions?
+Does the operation need to support different precisions (FP32, FP16, INT8)?
+Is the operation differentiable (if you need training support)?
+In this specific case, PPScatterPlugin is necessary because:
+
+The pillar scatter operation is unique to PointPillars architecture
+It requires specific memory access patterns for efficient GPU execution
+It needs to handle both float and half precision inputs
+The operation cannot be easily represented using standard TensorRT layers
+This is a good example of when a custom plugin is justified - when you have a specialized operation that's crucial for your model's architecture and performance.
+
+
+
