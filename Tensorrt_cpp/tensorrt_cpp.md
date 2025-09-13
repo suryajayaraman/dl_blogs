@@ -19,6 +19,7 @@
   - [Preprocessing](#preprocessing)
   - [Generate Engine and Execution Context](#generate-engine-and-execution-context)
   - [Inference and Post Processing](#inference-and-post-processing)
+
 - [Miscellaneous Topics](#miscellaneous-topics)
   - [CUDA Streams](#cuda-streams)
   - [Output Types and Precision Settings](#output-types-and-precision-settings-fp32-fp16-int8)
@@ -250,6 +251,99 @@ cudaFree(input_mem);
 cudaFree(output_mem);
 ```
 - Post Process the raw output (e.g., apply softmax, interpret classification results, or parse object detection bounding boxes). For very large outputs, post-processing can be done directly on the GPU using CUDA kernels for efficiency.
+
+## Notes on implementation
+
+
+### 3D object detection omdel with PointPillars
+
+- [Repo](https://github.com/NVIDIA-AI-IOT/CUDA-PointPillars/)
+
+![pointpillars_architecture](images/pointpillars_architecture.png)
+
+```cpp
+class Voxelization {
+
+// create voxels
+// init (allocate memory for all member variables)
+// generate base features (create voxel wise features - 4)
+// generate features (xc, yc, zc, xp, yp, other 5 features)
+virtual void forward(const float *_points, int num_points, void *stream) override {
+    cudaStream_t _stream = reinterpret_cast<cudaStream_t>(stream);
+    checkRuntime(cudaMemsetAsync(params_input_, 0, sizeof(unsigned int), _stream));
+}
+}
+
+class Backbone {
+
+// read and deserialize
+init() {
+    runtime_ = std::shared_ptr<nvinfer1::IRuntime>(nvinfer1::createInferRuntime(gLogger_), destroy_pointer<nvinfer1::IRuntime>);
+    engine_ = std::shared_ptr<nvinfer1::ICudaEngine>(runtime_->deserializeCudaEngine(pdata, size, nullptr),
+                                                     destroy_pointer<nvinfer1::ICudaEngine>);
+}
+
+// 2D convolution based feature extraction
+virtual void forward(const nvtype::half* voxels, const unsigned int* voxel_idxs, const unsigned int* params, void* stream = nullptr) override {
+    engine_->forward({voxels, voxel_idxs, params, cls_, box_, dir_}, static_cast<cudaStream_t>(_stream));
+}
+}
+
+class PostProcess {
+
+// among best scored bounding boxes, use nms to find best non overlapping bounding boxes
+
+virtual void forward(const float* cls, const float* box, const float* dir, void* stream) {
+    cudaStream_t _stream = static_cast<cudaStream_t>(stream);
+    checkRuntime(nms_launch(bndbox_num_, bndbox_, param_.nms_thresh, h_mask_, _stream));
+    checkRuntime(cudaMemcpyAsync(h_bndbox_, bndbox_, bndbox_num_ * 9 * sizeof(float), cudaMemcpyDeviceToHost, _stream));
+    checkRuntime(cudaStreamSynchronize(_stream));
+}
+}
+```
+
+### Face detection model
+- [Repo](https://github.com/cyrusbehr/tensorrt-cpp-api)
+```cpp
+m_runtime = std::unique_ptr<nvinfer1::IRuntime>{nvinfer1::createInferRuntime(m_logger)};
+
+// buffer is trt engine
+m_engine = std::unique_ptr<nvinfer1::ICudaEngine>(m_runtime->deserializeCudaEngine(buffer.data(), buffer.size()));
+
+m_context = std::unique_ptr<nvinfer1::IExecutionContext>(m_engine->createExecutionContext());
+
+clearGpuBuffers();
+m_buffers.resize(m_engine->getNbIOTensors());
+
+// create cuda streams
+cudaStream_t stream;
+Util::checkCudaErrorCode(cudaStreamCreate(&stream));
+
+// allocate memory for input, output buffers
+Util::checkCudaErrorCode(cudaMallocAsync(&m_buffers[i], outputLength * m_options.maxBatchSize * sizeof(T), stream));
+
+// Synchronize and destroy the cuda stream
+Util::checkCudaErrorCode(cudaStreamSynchronize(stream));
+Util::checkCudaErrorCode(cudaStreamDestroy(stream));
+
+////////////////////////////////////// inference
+
+// Create the cuda stream that will be used for inference
+cudaStream_t inferenceCudaStream;
+Util::checkCudaErrorCode(cudaStreamCreate(&inferenceCudaStream));
+
+
+bool status = m_context->enqueueV3(inferenceCudaStream);
+
+// copy data from GPU to CPU
+Util::checkCudaErrorCode(cudaMemcpyAsync(output.data(),
+                                     static_cast<char *>(m_buffers[outputBinding]) + (batch * sizeof(T) * outputLength),
+                                     outputLength * sizeof(T), cudaMemcpyDeviceToHost, inferenceCudaStream));
+
+// Synchronize the cuda stream
+Util::checkCudaErrorCode(cudaStreamSynchronize(inferenceCudaStream));
+Util::checkCudaErrorCode(cudaStreamDestroy(inferenceCudaStream));
+```
 
 
 ## Miscellaneous topics
