@@ -19,7 +19,9 @@
   - [Preprocessing](#preprocessing)
   - [Generate Engine and Execution Context](#generate-engine-and-execution-context)
   - [Inference and Post Processing](#inference-and-post-processing)
-
+- [Implementation notes](#implementation-notes)
+    - [3D object detection model with PointPillars](#3d-object-detection-model-with-pointpillars)
+    - [Face detection model](#face-detection-model)
 - [Miscellaneous Topics](#miscellaneous-topics)
   - [CUDA Streams](#cuda-streams)
   - [Output Types and Precision Settings](#output-types-and-precision-settings-fp32-fp16-int8)
@@ -252,10 +254,9 @@ cudaFree(output_mem);
 ```
 - Post Process the raw output (e.g., apply softmax, interpret classification results, or parse object detection bounding boxes). For very large outputs, post-processing can be done directly on the GPU using CUDA kernels for efficiency.
 
-## Notes on implementation
+## Implementation notes
 
-
-### 3D object detection omdel with PointPillars
+### 3D object detection model with PointPillars
 
 - [Repo](https://github.com/NVIDIA-AI-IOT/CUDA-PointPillars/)
 
