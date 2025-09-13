@@ -52,7 +52,7 @@
         - Limited memory, strict latency requirements, limited compute (embedded GPU), energy consumption, environment limitations (temperature)
 - Model optimization, for inference is critical, and can be classified into 4 categories
 
-![Model_optimization_techniques](images/Model_optimization_techniques.png)
+![Model_optimization_techniques](assets/Model_optimization_techniques.png)
 
 - [Image source](https://www.youtube.com/watch?v=f86hkOGoX54)
 - Advantages
@@ -67,7 +67,7 @@
     - Convert the model to desired format
     - Use deployment option for inference
 
-![inference_options](images/inference_options.png)
+![inference_options](assets/inference_options.png)
 
 - [Image source](https://docs.nvidia.com/deeplearning/tensorrt/latest/getting-started/quick-start-guide.html)
 - Two categories for classification
@@ -106,7 +106,7 @@
     - A series of parsers and integrations to convert your model to an optimized engine
     - A series of TensorRT runtime APIs with several associated tools for deployment.
 
-![inference_workflow](images/inference_workflow.png)
+![inference_workflow](assets/inference_workflow.png)
 
 - [Image source](https://www.youtube.com/watch?v=f86hkOGoX54)
 
@@ -260,7 +260,7 @@ cudaFree(output_mem);
 
 - [Repo](https://github.com/NVIDIA-AI-IOT/CUDA-PointPillars/)
 
-![pointpillars_architecture](images/pointpillars_architecture.png)
+![pointpillars_architecture](assets/pointpillars_architecture.png)
 
 ```cpp
 class Voxelization {
