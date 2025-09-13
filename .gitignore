@@ -1,7 +1,1 @@
 *.mp4
-
-# Tensorrt reference repos
-Tensorrt_cpp/reference_repos/*
-
-# workspace settings
-Tensorrt_cpp/dl_blogs.code-workspace
