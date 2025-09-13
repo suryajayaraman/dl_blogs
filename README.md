@@ -1,7 +1,7 @@
 # Deep Learning Blogs
 Technical writeups, mini-projects focussed on Deep Learning applications for Autonomous vehicles
 
-## [TenssorRT](TensorRT/README.md)
+## [TensorRT](TensorRT/README.md)
 
 ## [Safety Standards](Safety_standards/README.md)
 
