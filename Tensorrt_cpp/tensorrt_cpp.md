@@ -1,17 +1,44 @@
 # Deploying TensorRT Engine on NVIDIA GPU
 
-## Problem statement
+## Table of Contents
+- [Problem Statement](#problem-statement)
+- [Introduction](#introduction)
+- [Deployment Options](#deployment-options)
+  - [Python vs C++ Runtime](#python-vs-c-runtime)
+  - [Torch-TensorRT](#torch-tensorrt)
+  - [ONNX](#onnx)
+  - [TensorRT](#tensorrt)
+- [Prerequisites](#prerequisites)
+  - [Hardware and Software Requirements](#hardware-and-software-requirements)
+  - [Dependencies](#dependencies)
+  - [Model Requirements](#model-requirements)
+- [TensorRT Deployment Workflow](#tensorrt-deployment-workflow)
+  - [Engine File Generation](#engine-file-generation-only-offline-step)
+  - [Logger and Builder Instantiation](#logger-and-builder-instantiation)
+  - [Deserializing Plan](#deserializing-plan)
+  - [Preprocessing](#preprocessing)
+  - [Generate Engine and Execution Context](#generate-engine-and-execution-context)
+  - [Inference and Post Processing](#inference-and-post-processing)
+- [Miscellaneous Topics](#miscellaneous-topics)
+  - [CUDA Streams](#cuda-streams)
+  - [Output Types and Precision Settings](#output-types-and-precision-settings-fp32-fp16-int8)
+  - [Results](#results)
+  - [Understanding TensorRT Speedup Mechanisms](#understanding-tensorrt-speedup-mechanisms)
+  - [Performance Impact Analysis](#performance-impact-analysis)
+  - [Understanding Precision Optimization](#understanding-precision-optimization-in-detail)
+  - [Plugins](#plugins)
+  - [Strong Typing vs Weak Typing](#strong-typing-vs-weak-typing)
+  - [Dynamic Shapes](#dynamic-shapes)
+  - [Extending TensorRT with Custom Layers](#extending-tensorrt-with-custom-layers)
+  - [Polygraphy](#polygraphy)
+- [References](#references)
+  - [GPU Programming Resources](#gpu-programming-resources)
+
+---
+
+## Problem Statement
 - Run deep learning models efficiently at runtime on embedded platforms (only platforms with NVIDIA GPUs in this document scope)
 - Meet latency requirements for safety critical applications
-
-## Overview
-- Introduction
-- Deployment options
-- Pre-requisites for Tensorrt deployment
-- Tensorrt deployment workflow
-- Appendix
-    - TensorRT optimization techniques
-- References
 
 ## Introduction
 - Deep Learning models, getting larger, while there is increased focus on edge-computing for various applications
