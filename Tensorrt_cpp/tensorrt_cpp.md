@@ -286,26 +286,6 @@ The relative impact of graph optimizations versus precision optimizations varies
     - INT8 can achieve 3-4x speedup over FP32
     - Combined FP16/INT8 mixed precision can reach up to 6x speedup [TensorRT Documentation]
 
-Research papers show precision optimization generally contributes more to speedup:
-
-1. **Hardware Efficiency:**
-    - FP16 operations use half the memory bandwidth
-    - Modern GPUs have dedicated Tensor Cores optimized for FP16/INT8
-    - NVIDIA A100 can process 8x more FP16 operations per cycle compared to FP32
-    - Study: "Mixed Precision Training" (Micikevicius et al., 2017) shows 2x memory reduction and 2-3x throughput increase
-
-2. **Memory Bandwidth Impact:**
-    - Memory bandwidth often bottlenecks inference
-    - FP16 reduces memory traffic by 50%
-    - INT8 reduces it by 75%
-    - Paper: "In-Datacenter Performance Analysis of a Tensor Processing Unit" (Google, 2017) shows memory bandwidth dominates inference time
-
-3. **Energy Efficiency:**
-    - INT8 operations consume 4x less energy than FP32
-    - Paper: "Energy Efficiency of Neural Networks" (Han et al., 2016) demonstrates 4-5x energy savings with quantization
-
-This analysis suggests precision optimization typically contributes 60-70% of the total speedup, while graph optimizations contribute 30-40%, though exact ratios depend on the specific model architecture and hardware.
-
 ### Understanding Precision Optimization in Detail
 
 Precision optimization changes how numbers are stored and computed in the GPU. To understand this:
@@ -351,38 +331,6 @@ Precision optimization changes how numbers are stored and computed in the GPU. T
    * Neural networks are naturally tolerant to some imprecision
    * Like human brain doesn't need exact precise numbers
    * Example: Recognizing a cat works whether whiskers are 5.123456 cm or 5.12 cm long
-
-5. **Practical Implementation**
-   * **FP16:**
-     - Simply converts FP32 numbers to FP16
-     - Usually loses very little accuracy
-     - Modern GPUs have special hardware (Tensor Cores) for FP16
-   
-   * **INT8:**
-     - More complex, requires "calibration"
-     - Like adjusting a scale before weighing:
-       1. Look at range of values in each layer
-       2. Find best way to map FP32 numbers to INT8 range (-128 to 127)
-       3. Store these mapping factors ("scales")
-       4. During inference: 
-          * Convert input → INT8
-          * Process in INT8
-          * Convert output back to FP32
-
-6. **When to Use Each Precision**
-   * **FP32:** When absolute accuracy is required (medical, financial)
-   * **FP16:** Most common choice, good balance of speed and accuracy
-   * **INT8:** When maximum speed is needed and some accuracy loss is acceptable
-
-7. **Common Misconceptions**
-   * Lower precision doesn't always mean worse results
-   * Modern networks are often trained with noise/dropout
-   * This natural robustness means they handle reduced precision well
-
-## Maybe used
-*   **Troubleshooting Conversion Issues**
-    *   **Constant Folding:** Running constant folding using Polygraphy on the ONNX model before parsing can often resolve TensorRT conversion issues.
-    *   **Model Modification:** In some cases, you might need to modify the ONNX model, for example, by replacing subgraphs with custom plugins or reimplementing unsupported operations with supported ones. Tools like ONNX-GraphSurgeon can assist with this.
 
 ### Plugins
 - TensorRT has a Plugin interface that allows applications to implement operations that TensorRT does not support natively.
