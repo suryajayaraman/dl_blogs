@@ -15,7 +15,7 @@
 
 ## Introduction
 - Deep Learning models, getting larger, while there is increased focus on edge-computing for various applications
-- Performance targets b/w training and inference differ significantly
+- Performance targets between training and inference differ significantly
     - Training
         - can consume large memory, super high compute GPU platforms (multi-GPU), no strict restriction on latency
     - Inference
@@ -72,16 +72,16 @@
 
 ### Tensorrt
 - NVIDIA TensorRT is an SDK for optimizing trained deep-learning models to enable high-performance inference. TensorRT contains a deep learning inference optimizer and a runtime for execution.
-- NVIDIA Tensorrt consists of two components
+- NVIDIA TensorRT consists of two components:
     - A series of parsers and integrations to convert your model to an optimized engine
-    - An series of TensorRT runtime APIs with several associated tools for deployment.
+    - A series of TensorRT runtime APIs with several associated tools for deployment.
 
 ![inference_workflow](images/inference_workflow.png)
 
 - [Image source](https://www.youtube.com/watch?v=f86hkOGoX54)
 
 ## Prerequisites
-- Assumtion: model is converted to ONNX format, to be deployed in an C++ application
+- Assumption: model is converted to ONNX format, to be deployed in an C++ application
 
 ### Hardware and Software Requirements
 - **NVIDIA graphics card** with compute capability >=5.0
@@ -253,7 +253,7 @@ TensorRT supports different precision modes for inference, allowing trade-offs b
     - Need **calibration data** to enable INT8 inference
 
 ### Results
-- Compare avg inference time b/w pytorch and tensorrt execution
+- Compare average inference time between PyTorch and TensorRT execution.
 - CUDA initializes and caches some data. So, first call is always slower. Use avg time across multiple cycles
 - 4-6 times using FP16 mode, 2-3 times using FP32 mode
 
@@ -379,7 +379,7 @@ context.setInputShape("foo", Dims{3, {3, 150, 250}})
 - [Tensorrt Python API](https://learnopencv.com/how-to-convert-a-model-from-pytorch-to-tensorrt-and-speed-up-inference/)
 - [NVIDIA Tensorrt official documentation](https://docs.nvidia.com/deeplearning/tensorrt/latest/installing-tensorrt/overview.html#installing-pycuda)
 - [Tensorrt CPP Github implementation](https://github.com/cyrusbehr/tensorrt-cpp-api)
-- [Veoctorization MS blog post](https://learn.microsoft.com/en-gb/archive/blogs/nativeconcurrency/what-is-vectorization)
+- [Vectorization MS blog post](https://learn.microsoft.com/en-gb/archive/blogs/nativeconcurrency/what-is-vectorization)
 - [Vectorization Stackoverflow post](https://stackoverflow.com/questions/1422149/what-is-vectorization)
 - [Model quantization speeds up inference](https://www.reddit.com/r/learnmachinelearning/comments/zgzh6r/whyhow_does_model_quantization_speed_up_inference/)
 - [ONNX version spec](https://github.com/onnx/onnx/tree/main?tab=readme-ov-file)
