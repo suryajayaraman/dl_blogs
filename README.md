@@ -7,6 +7,7 @@ Technical writeups, mini-projects focussed on Deep Learning applications for Aut
 
 ## [End to End Autonomous Driving](End_to_End_Autonomous_Driving/E2E_references.md)
 
+[![E2E Autonomous Driving using Imitation learning](End_to_End_Autonomous_Driving/assets/Town10HD_Scenario10_route8_7pts_8fps.gif)](https://youtu.be/Qt1543kDFcM "E2E Autonomous Driving")
 
 ## [Self-Supervised-Learning](Self-Supervised-Learning/README.md)
    - Literature survey about Self-Supervised Learning approaches for Autonomous vehicles, taxonomy
